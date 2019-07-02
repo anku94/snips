@@ -9,11 +9,14 @@ void fun() {
       : "=a" (ts2), "=d" (ts)
       );
 
-  printf("Timestamp: %u\n", ts);
-  printf("Timestamp: %u\n", ts2);
+  printf("EDX\t\t: %u\n", ts);
+  printf("EAX\t\t: %u\n", ts2);
+
+  uint64_t ts_concat  = ((ts * 1ull) << 32) | (ts2 * 1ull);
+
+  printf("TS Concat\t: %llu\n", ts_concat);
 
   uint64_t msr;
-  msr = 1ull << 48;
 
   asm volatile( "rdtsc \n"
       "shl $32, %%rdx \n"
@@ -22,7 +25,7 @@ void fun() {
       :
       : "rdx");
 
-  printf("Timestamp: %llu\n", msr);
+  printf("TS2 \t\t: %llu\n", msr);
 }
 
 int main() {
