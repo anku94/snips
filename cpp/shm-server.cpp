@@ -74,7 +74,7 @@ void mserver() {
   while (shmaddr[5] != 'w')
     ;
 
-  fprintf(stderr, "Server shmcontent: %s\n", &shmaddr[5]);
+  fprintf(stderr, "Server shmcontent: %s\n", &shmaddr[0]);
 
   shm_unlink("myshm");
   if (res < 0) {
