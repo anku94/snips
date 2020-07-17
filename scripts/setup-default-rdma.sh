@@ -8,7 +8,6 @@ export HTTPS_PROXY="http://ops:8888"
 # sudo modprobe rdma_ucm # ib_ucm also?
 # sudo modprobe ib_umad # needed for ibstat
 
-# for erpc
 sudo apt install -y libgflags-dev libgtest-dev
 cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
 sudo apt install -y libpmem-dev libpapi-dev
@@ -24,6 +23,8 @@ sudo apt install -y ctags
 
 sudo apt remove -y openmpi-bin libopenmpi-dev
 sudo apt install -y mpich
+
+sudo apt install -y linux-tools-common linux-tools-`uname -r` linux-cloud-tools-`uname -r`
 
 sudo /share/testbed/bin/localize-resolv
 
