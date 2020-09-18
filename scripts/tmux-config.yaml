@@ -1,0 +1,25 @@
+session_name: carp
+windows:
+  - window_name: boot
+    focus: true
+    layout: tiled
+    panes:
+      - echo one
+      - echo two
+  - window_name: code
+    layout: tiled
+    panes:
+      - cd /users/ankushj/range/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
+      - cd /users/ankushj/range/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
+  - window_name: run
+    layout: tiled
+    panes:
+      - cd /users/ankushj/range/build-post/bin/run
+      - cd /users/ankushj/range/deltafs-umbrella/build/
+      - cd /users/ankushj/range/build-post/bin/run
+      - cd /users/ankushj/range/build-post/bin/run
+  - window_name: extra
+    layout: tiled
+    panes:
+      - echo one
+      - echo two
