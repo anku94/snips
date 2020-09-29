@@ -37,12 +37,27 @@ progress_test() {
   progress_end
 }
 
+wait_until_multiple() {
+  INTVL=$(( $1 * 60 ))
+
+  while : ;do
+    CUR_TIME=$( date +%s )
+    INTVL_LEFT=$(( CUR_TIME % INTVL ))
+    if [ "$INTVL_LEFT" -le 10 ]; then
+      break
+    fi
+    printf "\r$((INTVL - INTVL_LEFT)) seconds to start...        "
+    sleep 2
+  done
+}
+
 run() {
   INTVL_MIN=$1
   PROG_NCHUNKS=$2
 
   echo -e "\n\tAlarm every $INTVL_MIN minute(s)\n"
 
+  wait_until_multiple $INTVL_MIN
 
   while :
   do
