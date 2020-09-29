@@ -44,11 +44,16 @@ wait_until_multiple() {
     CUR_TIME=$( date +%s )
     INTVL_LEFT=$(( CUR_TIME % INTVL ))
     if [ "$INTVL_LEFT" -le 10 ]; then
+      printf "\n"
       break
     fi
     printf "\r$((INTVL - INTVL_LEFT)) seconds to start...        "
     sleep 2
   done
+}
+
+sound() {
+  afplay /System/Library/Sounds/Ping.aiff
 }
 
 run() {
@@ -57,25 +62,29 @@ run() {
 
   echo -e "\n\tAlarm every $INTVL_MIN minute(s)\n"
 
-  wait_until_multiple $INTVL_MIN
+  # wait_until_multiple $INTVL_MIN
+
+  INTVL_SEC=$(( INTVL_MIN * 60 ))
+  INTVL_WAIT=$(( INTVL_SEC - ( $(date +%s) % $INTVL_SEC ) ))
+  sound
 
   while :
   do
     date
 
-    INTVL_SEC=$(( INTVL_MIN * 60 ))
-    CHUNKSZ=$(( INTVL_SEC / PROG_NCHUNKS ))
-    INTVL_CHUNKS=$(( INTVL_SEC / CHUNKSZ ))
+    CHUNKSZ=$(( INTVL_WAIT / PROG_NCHUNKS ))
+    INTVL_CHUNKS=$(( INTVL_WAIT / CHUNKSZ ))
 
-    for SLEEP_CYCLE in $(seq $CHUNKSZ $CHUNKSZ $INTVL_SEC);
+    for SLEEP_CYCLE in $(seq $CHUNKSZ $CHUNKSZ $INTVL_WAIT);
     do
-      PROG_PCT=$(( (SLEEP_CYCLE - CHUNKSZ) * 100 / INTVL_SEC ))
+      PROG_PCT=$(( (SLEEP_CYCLE - CHUNKSZ) * 100 / INTVL_WAIT ))
       progress $PROG_PCT
       sleep $CHUNKSZ
     done
     progress_end
 
-    afplay /System/Library/Sounds/Ping.aiff
+    sound
+    INTVL_WAIT=$INTVL_SEC
   done
 }
 
