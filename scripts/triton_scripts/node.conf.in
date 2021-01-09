@@ -1,0 +1,4 @@
+[node]
+internal_ip=NODEIP
+external_ip=NODEIP
+devices=/dev/sda4

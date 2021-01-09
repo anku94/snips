@@ -1,0 +1,11 @@
+[cluster]
+disk_mountpoint=/home/sortuser/mnt
+username=sortuser
+master_internal_address=MASTIP
+master_external_address=MASTIP
+log_directory=/home/sortuser/logs/themis
+logaggr_directory=/home/sortuser/logs/aggr
+themis_directory=/home/sortuser/triton/themis_tritonsort/src/scripts/themis
+provider=narwhal
+id=myclus
+private_key=/home/sortuser/.ssh/id_rsa

@@ -1,0 +1,10 @@
+ssh:
+  key: "/home/sortuser/.ssh/id_rsa"
+
+dump_core: false
+
+redis:
+  host: "MASTIP"
+  port: 6379
+  db: 0
+
