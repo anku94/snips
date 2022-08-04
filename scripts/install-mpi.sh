@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-OPENMPI_PACKAGES=( openmpi-common libopenmpi2 openmpi-bin )
+OPENMPI_PACKAGES=( openmpi-common libopenmpi2 openmpi-bin libopenmpi-dev )
 MPICH_PACKAGES=( libmpich-dev libmpich12 mpich )
 
 get_arr_str() {

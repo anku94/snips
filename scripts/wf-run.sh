@@ -22,7 +22,16 @@ getnodestrs() {
 
 #getnodestrs
 #/share/testbed/bin/wf+ib-makebed -e stdwfib4 -p TableFS -i UBUNTU18-64-PDLSTD -I 2 -d 72 $(getnodestrs)
-/share/testbed/bin/wf+ib-makebed -e wfib6 -p TableFS -i UBUNTU18-64-PDLSTD -I 2 -d 72 -n 6
+#/share/testbed/bin/wf+ib-makebed -e wfib33 -p TableFS -i UBUNTU18-64-PDLSTD -I 2 -d 72 -n 33
+#/share/testbed/bin/wf+ib-makebed -e wfib6ccp -p TableFS -i CENTOS7-64-CARP -I 2 -d 72 -n 6
+
+#/share/testbed/bin/wf-makebed -p TableFS -e ltib12 -n 12 -s /share/testbed/lustre/lustre-ipoib-startup -i centos7-lustre -f ib
+#/share/testbed/bin/wf-makebed -p TableFS -e mpi34 -n 34 -s /share/testbed/bin/generic-startup -i UBUNTU18-64-MPICH33 -f ib -f ibok
+#/share/testbed/bin/wf-makebed -p TableFS -e ts34 -n 34 -s /share/testbed/bin/generic-startup -i UBUNTU18-64-TRITON -f ib -f ibok
+#/share/testbed/bin/wf-makebed -p TableFS -e amrib08 -n 8 -s /share/testbed/bin/generic-startup -i UBUNTU20-64-AMR -f ib -f ibok
+#/share/testbed/bin/wf-makebed -p TableFS -e amrib34v2 -n 34 -s /share/testbed/bin/generic-startup -i UBUNTU20-64-AMR -f ib -f ibok
+#/share/testbed/bin/wf-makebed -p TableFS -e carpib68 -n 68 -s /share/testbed/bin/generic-startup -i UBUNTU18-64-CARP -f ib -f ibok
+/share/testbed/bin/wf-makebed -p TableFS -e ltib40 -n 40 -s /share/testbed/lustre/lustre-ibdirect-startup -i centos8-lustre -f ib -f ibok
 
 
 

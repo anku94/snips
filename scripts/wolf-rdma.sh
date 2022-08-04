@@ -26,7 +26,7 @@ get_hostid() {
 assign_ip() {
   host_id=$(get_hostid)
   ip_last=$(( $host_id + 2 ))
-  sudo ifconfig ib0 10.10.10.$ip_last netmask 255.255.255.0
+  sudo ifconfig ib0 10.10.84.$ip_last netmask 255.255.255.0
 }
 
 sleep 2
@@ -39,7 +39,7 @@ run() {
     # sudo opensm
   # fi
 
-  assign_ip
+  #assign_ip
 }
 
 run

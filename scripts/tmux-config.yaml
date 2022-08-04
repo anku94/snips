@@ -9,15 +9,15 @@ windows:
   - window_name: code
     layout: tiled
     panes:
-      - cd /users/ankushj/range/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
-      - cd /users/ankushj/range/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
+      - cd /users/ankushj/range/carp-umb/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
+      - cd /users/ankushj/range/carp-umb/deltafs-umbrella/build/deltafs-vpic-preload-prefix/src/deltafs-vpic-preload/src
   - window_name: run
     layout: tiled
     panes:
-      - cd /users/ankushj/range/build-post/bin/run
-      - cd /users/ankushj/range/deltafs-umbrella/build/
-      - cd /users/ankushj/range/build-post/bin/run
-      - cd /users/ankushj/range/build-post/bin/run
+      - cd /users/ankushj/range/carp-umb/carp-build/scripts
+      - cd /users/ankushj/range/carp-umb/deltafs-umbrella/build
+      - cd /users/ankushj/range/carp-umb/carp-build/scripts
+      - cd /users/ankushj/range/carp-umb/carp-build/scripts
   - window_name: extra
     layout: tiled
     panes:

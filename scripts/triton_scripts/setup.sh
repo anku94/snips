@@ -91,8 +91,46 @@ poll-ip() {
     # stat=$(ssh $host "ibstat | grep LinkUp")
 
     [[ -z $stat ]] || 1
-    echo $(get-ip $host)
+    echo $host
+    ip=$(get-ip-wf $host)
+    ping -c 1 $ip
   done
+}
+
+configure() {
+  numhosts=$(get_numhosts)
+
+  echo "$numhosts hosts found." 1>&2
+
+  CONFPY=/home/sortuser/triton/themis_tritonsort/src/scripts/themis/cluster/configure_cluster.py
+
+  $CONFPY io_disks $HOME/mnt/disk_1
+  $CONFPY intermediate_disks $HOME/mnt/disk_2
+  $CONFPY interfaces ib0
+
+  NODES=""
+
+  for i in `seq $numhosts`;
+  do
+    host=h$(( i - 1 ))
+    # stat=$(ssh $host "ibstat | grep LinkUp")
+
+    [[ -z $stat ]] || 1
+    echo $host
+    ip=$(get-ip-wf $host)
+    #$CONFPY add $ip
+    NODES="$NODES $ip"
+  done
+
+  $CONFPY add $NODES
+}
+
+run-coord() {
+  /home/sortuser/triton/themis_tritonsort/src/scripts/themis/job_runner/cluster_coordinator.py /home/sortuser/triton/themis_tritonsort/src/tritonsort/mapreduce/mapreduce /home/sortuser/triton/themis_tritonsort/src/scripts/themis/cloud/default_configs/amazon/themis/c3.2xlarge.yaml --interface ib0
+}
+
+run-job() {
+  /home/sortuser/triton/themis_tritonsort/src/scripts/themis/job_runner/run_job.py /home/sortuser/triton/themis_tritonsort/narwhal.json
 }
 
 mpi-type() {
@@ -151,9 +189,9 @@ triton-src() {
 
   cd $PREF/themis_tritonsort/src
   rm -rf build build_old CMakeFiles CMakeCache.txt cmake_install.cmake Makefile
-  mkdir build
-  cd build
-  cmake -DMEMORY_MANAGER=jemalloc -DMEMORY_MANAGER_PHASE_TWO=jemalloc ..
+  # mkdir build
+  # cd build
+  cmake -DMEMORY_MANAGER=tcmalloc -DMEMORY_MANAGER_PHASE_TWO=tcmalloc .
   # some targets fail to build with jemalloc, we don't need them
   make -j || /bin/true
 }
@@ -180,6 +218,8 @@ triton-setup() {
   mkdir -p ~/logs/themis
   mkdir -p ~/logs/aggr
 
+  sleep  $(( $RANDOM % 10 ))
+
   mastip=$(get-ip-wf h0)
   echo $mastip
 
@@ -202,4 +242,11 @@ triton-setup() {
   pip install plumbum paramiko matplotlib
 }
 
-triton-setup
+while getopts ":abcd" arg; do
+  case $arg in
+    a) triton-setup ;;
+    b) configure ;;
+    c) run-coord ;;
+    d) run-job ;;
+  esac
+done

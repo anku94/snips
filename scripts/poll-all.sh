@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euxo pipefail
 
 get_numhosts() {
   count=$(/share/testbed/bin/emulab-listall | sed 's/,/\n/g' | wc -l)
@@ -21,7 +22,8 @@ poll-hostname() {
 get-ip-wf() {
   stat=$(ssh $host "ibstat | grep LinkUp")
 
-  [[ -z $stat ]] || echo $(ssh $host "ifconfig ib0 | egrep -o '10.94.1.[0-9]+' | grep -v 255")
+  #[[ -z $stat ]] || echo $(ssh $host "ifconfig ib0 | egrep -o '10.94.1.[0-9]+' | grep -v 255"):16
+  [[ -z $stat ]] || echo $(ssh $host "ifconfig eno1 | egrep -o '10.111.4.[0-9]+' | grep -v 255"):16
 }
 
 get-ip-sus-fge() {
@@ -43,7 +45,7 @@ get-ip() {
     echo "sus" 1>&2
     get-ip-sus-fge
   elif [[ $nodeid = wf* ]]; then
-    echo "wf"
+    #echo "wf"
     get-ip-wf
   fi
 }
@@ -58,7 +60,7 @@ poll-ip() {
     host=h$(( i - 1 ))
     # stat=$(ssh $host "ibstat | grep LinkUp")
 
-    [[ -z $stat ]] || 1
+    #[[ -z $stat ]] || 1
     echo $(get-ip $host)
   done
 }

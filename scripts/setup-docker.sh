@@ -1,25 +1,58 @@
-sudo apt-get remove -y docker docker-engine docker.io containerd runc
-sudo apt-get update
-sudo apt-get install -y \
-  apt-transport-https \
-  ca-certificates \
-  curl \
-  gnupg-agent \
-  software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+#!/usr/bin/env bash
 
-sudo apt-key fingerprint 0EBFCD88 # assert equals the following
-# pub   rsa4096 2017-02-22 [SCEA]
-# 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
-# uid           [ unknown] Docker Release (CE deb) <docker@docker.com>
-# sub   rsa4096 2017-02-22 [S]
-echo ">>> ABORT if 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88 does not match"
+install-docker() {
+  sudo apt-get remove -y docker docker-engine docker.io containerd runc
+  sudo apt-get update
+  sudo apt-get install \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+  sudo mkdir -p /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-sudo add-apt-repository \
-  "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) \
-  stable"
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-sudo apt-get update
+  sudo apt-get update
+  sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+}
 
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+setup-user() {
+  sudo groupadd docker
+  sudo usermod -aG docker $USER
+  newgrp docker
+}
+
+setup-config() {
+  (
+  cat << EOF
+{
+  "proxies":
+    {
+          "default":
+              {
+                      "httpProxy": "http://proxy.pdl.cmu.edu:3128",
+      "httpsProxy": "http://proxy.pdl.cmu.edu:3128"
+    }
+  }
+}
+EOF
+  ) | tee ~/.docker/config.json
+
+  sudo mkdir -p /etc/systemd/system/docker.service.d
+  (
+    cat << EOF
+[Service]
+Environment="HTTP_PROXY=http://proxy.pdl.cmu.edu:3128"
+Environment="HTTPS_PROXY=http://proxy.pdl.cmu.edu:3128"
+EOF
+  ) | sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf
+  sudo systemctl daemon-reload
+  sudo systemctl restart docker
+}
+
+# install-docker
+# setup-user
+setup-config
