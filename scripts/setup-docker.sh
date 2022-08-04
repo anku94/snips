@@ -27,7 +27,7 @@ setup-user() {
 
 setup-config() {
   (
-  cat << EOF
+    cat << EOF
 {
   "proxies":
     {
@@ -53,6 +53,12 @@ EOF
   sudo systemctl restart docker
 }
 
+purge-docker() {
+  docker rm -vf $(docker ps -aq)
+  docker rmi -f $(docker images -aq)
+}
+
 # install-docker
 # setup-user
 setup-config
+# purge-docker
