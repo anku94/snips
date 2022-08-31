@@ -29,6 +29,7 @@ install_pkg() {
 preinstall_ub18() {
   # for gcc-9
   sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  install-package "libsnmp30 libsnmp-dev"
 }
 
 preinstall_ub20() {
@@ -42,7 +43,7 @@ install_basics() {
 
   PACKAGES=infiniband-diags
   PACKAGES="$PACKAGES libgflags-dev libgtest-dev libblkid-dev"
-  PACKAGES="$PACKAGES libsnmp30 libsnmp-dev socat pkg-config fio"
+  PACKAGES="$PACKAGES socat pkg-config fio"
   PACKAGES="$PACKAGES libpmem-dev libpapi-dev numactl g++-9 clang-format-10 htop tree"
   PACKAGES="$PACKAGES silversearcher-ag sysstat ctags libnuma-dev"
   PACKAGES="$PACKAGES linux-modules-extra-$(uname -r)"
@@ -50,7 +51,13 @@ install_basics() {
 
   install_pkg "$PACKAGES"
   sudo ln -s /usr/bin/clang-format-10 /usr/bin/clang-format || /bin/true
-  cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
+  if [[ $DISTRIB == "bionic" ]]; then
+    cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv libg* /usr/lib/
+  elif [[ $DISTRIB == "focal" ]]; then
+    cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv lib/libg* /usr/local/lib/
+  else
+    echo "We don't support this distribution sorry"
+  fi
 
   sudo dpkg -i ~/downloads/fd_7.3.0_amd64.deb
   sudo dpkg -i ~/downloads/bat_0.10.0_amd64.deb
@@ -90,9 +97,9 @@ misc_config() {
 
 mount_fses() {
   sudo /share/testbed/bin/network -ib connected
-  NOCONFIG=0 ./scripts/lustre-mount.sh 10.94.2.63
-  NOCONFIG=1 ./scripts/lustre-mount.sh 10.94.2.65 /mnt/lt20ad1
-  NOCONFIG=1 ./scripts/lustre-mount.sh 10.94.2.86 /mnt/lt20ad2
+  NOCONFIG=0 ~/scripts/lustre-mount.sh 10.94.2.63
+  NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.65 /mnt/lt20ad1
+  NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.86 /mnt/lt20ad2
   NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.3.109 /mnt/ltio
 }
 
