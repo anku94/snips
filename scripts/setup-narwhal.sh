@@ -4,8 +4,8 @@ set -eux
 
 init() {
   export DEBIAN_FRONTEND=noninteractive
-  export HTTP_PROXY="http://ops:8888"
-  export HTTPS_PROXY="http://ops:8888"
+  export HTTP_PROXY="http://proxy.pdl.cmu.edu:3128"
+  export HTTPS_PROXY="http://proxy.pdl.cmu.edu:3128"
 }
 
 rdma_unused() {
@@ -29,11 +29,12 @@ install_pkg() {
 preinstall_ub18() {
   # for gcc-9
   sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  install-package "libsnmp30 libsnmp-dev"
+  install_pkg "libsnmp30 libsnmp-dev"
 }
 
 preinstall_ub20() {
-  echo "Nothing to do here"
+  cd /users/ankushj/repos/amr-workspace/mvapich2-root/psm
+  sudo make install
 }
 
 install_basics() {
@@ -48,6 +49,7 @@ install_basics() {
   PACKAGES="$PACKAGES silversearcher-ag sysstat ctags libnuma-dev"
   PACKAGES="$PACKAGES linux-modules-extra-$(uname -r)"
   PACKAGES="$PACKAGES linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)"
+  PACKAGES="$PACKAGES parallel"
 
   install_pkg "$PACKAGES"
   sudo ln -s /usr/bin/clang-format-10 /usr/bin/clang-format || /bin/true
@@ -63,10 +65,14 @@ install_basics() {
   sudo dpkg -i ~/downloads/bat_0.10.0_amd64.deb
 }
 
-install_mpich() {
+install_mpich_ub18() {
+  sudo apt remove -y openmpi-bin libopenmpi-dev
+  sudo apt install -y mpich
+}
+
+install_mpich_ub20() {
   # current workflow is to use mvapich stored in a special location
   sudo apt remove -y openmpi-bin libopenmpi-dev
-  # sudo apt install -y mpich
 }
 
 install_gitlfs() {
@@ -80,14 +86,20 @@ install_cmake() {
   wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
   echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $DISTRIB main" | sudo tee /etc/apt/sources.list.d/kitware.list > /dev/null
   sudo apt update
-  install_pkg cmake cmake-curses-gui
+  install_pkg "cmake cmake-curses-gui"
   sudo rm /usr/share/keyrings/kitware-archive-keyring.gpg || /bin/true
   install_pkg kitware-archive-keyring
 
 }
 
-install_psm() {
-  echo lol
+install_psm_ub18() {
+  cd /users/ankushj/repos/amr-workspace/mvapich2-root/psm-ub18
+  sudo make install
+}
+
+install_psm_ub20() {
+  cd /users/ankushj/repos/amr-workspace/mvapich2-root/psm
+  sudo make install
 }
 
 misc_config() {
@@ -107,10 +119,10 @@ run_ub18() {
   init
   preinstall_ub18
   install_basics
-  install_mpich
+  install_mpich_ub18
   install_gitlfs
   install_cmake
-  install_psm
+  install_psm_ub18
   misc_config
   mount_fses
 }
@@ -119,10 +131,10 @@ run_ub20() {
   init
   preinstall_ub20
   install_basics
-  install_mpich
+  install_mpich_ub20
   install_gitlfs
   install_cmake
-  install_psm
+  install_psm_ub20
   misc_config
   mount_fses
 }
