@@ -2,6 +2,8 @@
 
 set -eux
 
+RESTART_MODE=0
+
 init() {
   export DEBIAN_FRONTEND=noninteractive
   export HTTP_PROXY="http://proxy.pdl.cmu.edu:3128"
@@ -102,6 +104,17 @@ install_psm_ub20() {
   sudo make install
 }
 
+install_vtune_ub20() {
+  cd /tmp
+  wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | \
+    gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+  echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+  sudo apt update
+
+  # last Vtune version to support Sandy Bridge
+  sudo apt install -y intel-oneapi-vtune=2021.9.0-545
+}
+
 misc_config() {
   sudo /share/testbed/bin/localize-resolv
   echo 0 | sudo dd of=/proc/sys/kernel/yama/ptrace_scope
@@ -116,25 +129,54 @@ mount_fses() {
 }
 
 run_ub18() {
+  RESTART_MODE=${RESTART_MODE:-0}
+
+  if [[ "$RESTART_MODE" != "0" ]]; then
+    echo "Restart mode. Skipping installs."
+  else
+    echo "Initialization mode. Will also install packages."
+  fi
+
   init
-  preinstall_ub18
-  install_basics
-  install_mpich_ub18
-  install_gitlfs
-  install_cmake
-  install_psm_ub18
+
+  if [[ "$RESTART_MODE" == "0" ]]; then
+    preinstall_ub18
+    install_basics
+    install_mpich_ub18
+    install_gitlfs
+    install_cmake
+    install_psm_ub18
+  fi
+
   misc_config
   mount_fses
 }
 
 run_ub20() {
+  RESTART_MODE=${RESTART_MODE:-0}
+
+  if [[ "$RESTART_MODE" != "0" ]]; then
+    echo "Restart mode. Skipping installs."
+  else
+    echo "Initialization mode. Will also install packages."
+  fi
+
   init
-  preinstall_ub20
-  install_basics
-  install_mpich_ub20
-  install_gitlfs
-  install_cmake
-  install_psm_ub20
+
+  # ---- BEGIN INSTALL BLOCK ----
+  # installs PSM
+  if [[ "$RESTART_MODE" == "0" ]]; then
+    preinstall_ub20
+
+    install_vtune_ub20
+    install_basics
+    install_mpich_ub20
+    install_gitlfs
+    install_cmake
+    install_psm_ub20
+  fi
+  # ---- end INSTALL BLOCK ----
+
   misc_config
   mount_fses
 }
@@ -152,5 +194,14 @@ run() {
     echo "We don't support this distribution sorry"
   fi
 }
+
+while getopts "r" opt; do
+  case ${opt} in
+    r )
+      echo -e "\n[[ INFO ]] Restart mode... skipping one-time installs\n"
+      RESTART_MODE=1
+      ;;
+  esac
+done
 
 run
