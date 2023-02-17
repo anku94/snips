@@ -113,11 +113,24 @@ install_vtune_ub20() {
 
   # last Vtune version to support Sandy Bridge
   sudo apt install -y intel-oneapi-vtune=2021.9.0-545
+  sudo usermod -aG vtune $(whoami)
+}
+
+install_x11_ub20() {
+  PACKAGES="xauth libxshmfence1 libglu1 libnss3"
+  PACKAGES="$PACKAGES libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0 libgbm1"
+  install_pkg "$PACKAGE
 }
 
 misc_config() {
   sudo /share/testbed/bin/localize-resolv
+
+  # For core dumps
+  echo 'core.%P' | sudo tee /proc/sys/kernel/core_pattern
+  # For multiple things
   echo 0 | sudo dd of=/proc/sys/kernel/yama/ptrace_scope
+  # For vtune
+  echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
 }
 
 mount_fses() {
@@ -169,6 +182,7 @@ run_ub20() {
     preinstall_ub20
 
     install_vtune_ub20
+    # install_x11_ub20
     install_basics
     install_mpich_ub20
     install_gitlfs
