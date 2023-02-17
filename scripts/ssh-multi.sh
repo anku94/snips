@@ -1,10 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ssh-multi
 # D.Kovalov
 # Based on http://linuxpixies.blogspot.jp/2011/06/tmux-copy-mode-and-how-to-control.html
 
 # a script to ssh multiple servers over multiple tmux panes
 
+shopt -s expand_aliases
+source ~/.bashrc
 
 get_numhosts() {
   count=$(/share/testbed/bin/emulab-listall | sed 's/,/\n/g' | wc -l)
@@ -77,26 +79,36 @@ sus_starttmux() {
 
 HOSTS=${HOSTS:=$*}
 
-run() {
-  count=$(get_numhosts)
+run_wcount() {
+  count=$1
   echo $count
   read -p "Nodes found: $count. Continue? (Y/n): " confirm
   [[ -z "${confirm}" || $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
   sus_starttmux $count
 }
 
+run_wocount() {
+  count=$(get_numhosts)
+  run_wcount $count
+}
+
 #mystarttmux
 #sus_starttmux $1
-while getopts "af:" opt; do
+while getopts "af:n:" opt; do
   case ${opt} in
     a )
       echo "sshing into all"
-      run
+      run_wocount
       ;;
     f )
       hostfile=$OPTARG
       echo "host file: $hostfile"
       mystarttmux $hostfile
+      ;;
+    n )
+      nhosts=$OPTARG
+      echo "sshing into $nhosts"
+      run_wcount $nhosts
       ;;
     : )
       echo "invalid opt"
