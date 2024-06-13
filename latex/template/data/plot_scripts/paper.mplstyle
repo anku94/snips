@@ -1,0 +1,16 @@
+font.size: 15
+axes.titlesize: 22
+axes.labelsize: 16
+
+xtick.labelsize: 14
+ytick.labelsize: 14
+legend.fontsize: 14
+
+figure.titlesize: 22
+figure.labelsize: medium
+figure.labelweight: bold
+
+axes.grid: True
+axes.grid.axis: both
+axes.grid.which: major
+axes.axisbelow: True
