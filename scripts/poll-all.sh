@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euxo pipefail
+set -u
 
 get_numhosts() {
   count=$(/share/testbed/bin/emulab-listall | sed 's/,/\n/g' | wc -l)
@@ -8,6 +8,7 @@ get_numhosts() {
 
 poll-hostname() {
   numhosts=$(get_numhosts)
+  # numhosts=4
 
   echo "$numhosts hosts found." 1>&2
 
@@ -15,15 +16,24 @@ poll-hostname() {
   do
     host=h$(( i - 1 ))
     stat=$(ssh $host "ibstat | grep LinkUp")
-    [[ -z $stat ]] || echo $host
+    node_name=$(ssh $host "hostname -f | cut -d. -f 1")
+    if [[ -z $stat ]]; then
+      flag=0
+    else
+      flag=1
+    fi
+    echo $flag,$node_name,$host
+
+    # [[ -z $stat ]] || echo $host
   done
 }
 
 get-ip-wf() {
   stat=$(ssh $host "ibstat | grep LinkUp")
 
-  #[[ -z $stat ]] || echo $(ssh $host "ifconfig ib0 | egrep -o '10.94.1.[0-9]+' | grep -v 255"):16
-  [[ -z $stat ]] || echo $(ssh $host "ifconfig eno1 | egrep -o '10.111.4.[0-9]+' | grep -v 255"):16
+  # [[ -z $stat ]] || echo $(ssh $host "ifconfig ib0 | egrep -o '10.94.1.[0-9]+' | grep -v 255"):16
+  [[ -z $stat ]] || echo $(ssh $host "ifconfig ibs2 | egrep -o '10.94.[0-9].[0-9]+' | grep -v 255"):16
+  # [[ -z $stat ]] || echo $(ssh $host "ifconfig eno1 | egrep -o '10.111.4.[0-9]+' | grep -v 255"):16
 }
 
 get-ip-sus-fge() {
@@ -52,6 +62,7 @@ get-ip() {
 
 poll-ip() {
   numhosts=$(get_numhosts)
+  # numhosts=4
 
   echo "$numhosts hosts found." 1>&2
 
@@ -78,5 +89,5 @@ mpi-type() {
   fi
 }
 
-#poll-hostname
+# poll-hostname
 poll-ip

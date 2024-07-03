@@ -59,6 +59,6 @@ purge-docker() {
 }
 
 # install-docker
-# setup-user
-setup-config
+setup-user
+# setup-config
 # purge-docker

@@ -20,6 +20,15 @@ rdma_unused() {
   echo Not Implemented
 }
 
+setup_debug() {
+  sudo mount -o remount,mode=755 /sys/kernel/debug
+  sudo mount -o remount,mode=755 /sys/kernel/debug/tracing
+  echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
+  echo -1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+  sudo chown root:TableFS /sys/kernel/debug/tracing/uprobe_events
+  sudo chmod g+rw /sys/kernel/debug/tracing/uprobe_events
+}
+
 remove_pkg() {
   sudo apt remove -y $1
 }
@@ -51,7 +60,7 @@ install_basics() {
   PACKAGES="$PACKAGES silversearcher-ag sysstat ctags libnuma-dev"
   PACKAGES="$PACKAGES linux-modules-extra-$(uname -r)"
   PACKAGES="$PACKAGES linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)"
-  PACKAGES="$PACKAGES parallel"
+  PACKAGES="$PACKAGES parallel ripgrep python3-venv"
 
   install_pkg "$PACKAGES"
   sudo ln -s /usr/bin/clang-format-10 /usr/bin/clang-format || /bin/true
@@ -65,6 +74,27 @@ install_basics() {
 
   sudo dpkg -i ~/downloads/fd_7.3.0_amd64.deb
   sudo dpkg -i ~/downloads/bat_0.10.0_amd64.deb
+}
+
+install_basics_ub22() {
+  remove_pkg clang-format clang-format-10
+
+  sudo apt-get update
+
+  PACKAGES=infiniband-diags
+  PACKAGES="$PACKAGES libgflags-dev libgtest-dev libblkid-dev"
+  PACKAGES="$PACKAGES socat pkg-config fio"
+  PACKAGES="$PACKAGES libpmem-dev libpapi-dev numactl g++-9 clang-format htop tree"
+  PACKAGES="$PACKAGES silversearcher-ag sysstat exuberant-ctags libnuma-dev"
+  PACKAGES="$PACKAGES linux-modules-extra-$(uname -r)"
+  PACKAGES="$PACKAGES linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)"
+  PACKAGES="$PACKAGES parallel"
+
+  install_pkg "$PACKAGES"
+  cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv lib/libg* /usr/local/lib/
+
+  sudo dpkg -i ~/downloads/fd_8.7.0_amd64.deb
+  sudo dpkg -i ~/downloads/bat_0.23.0_amd64.deb
 }
 
 install_mpich_ub18() {
@@ -119,7 +149,7 @@ install_vtune_ub20() {
 install_x11_ub20() {
   PACKAGES="xauth libxshmfence1 libglu1 libnss3"
   PACKAGES="$PACKAGES libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0 libgbm1"
-  install_pkg "$PACKAGE
+  install_pkg "$PACKAGES"
 }
 
 misc_config() {
@@ -135,10 +165,10 @@ misc_config() {
 
 mount_fses() {
   sudo /share/testbed/bin/network -ib connected
-  NOCONFIG=0 ~/scripts/lustre-mount.sh 10.94.2.63
-  NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.65 /mnt/lt20ad1
-  NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.86 /mnt/lt20ad2
-  NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.3.109 /mnt/ltio
+  # NOCONFIG=0 ~/scripts/lustre-mount.sh 10.94.2.63
+  # NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.65 /mnt/lt20ad1
+  # NOCONFIG=1 ~/scripts/lustre-mount.sh 10.94.2.86 /mnt/lt20ad2
+  # NOCONFIG=0 ~/scripts/lustre-mount.sh 10.94.3.109 /mnt/ltio
 }
 
 run_ub18() {
@@ -181,7 +211,7 @@ run_ub20() {
   if [[ "$RESTART_MODE" == "0" ]]; then
     preinstall_ub20
 
-    install_vtune_ub20
+    # install_vtune_ub20
     # install_x11_ub20
     install_basics
     install_mpich_ub20
@@ -195,6 +225,14 @@ run_ub20() {
   mount_fses
 }
 
+run_ub22() {
+  init
+  install_basics_ub22
+
+  # 746 stuff
+  sudo apt install -y build-essential libfuse-dev libtar-dev libxml2-dev libs3-dev gdb blktrace valgrind
+}
+
 run() {
   DISTRIB=$(cat /etc/*release | grep DISTRIB_CODENAME | cut -d= -f 2)
 
@@ -204,18 +242,32 @@ run() {
   elif [[ $DISTRIB == "focal" ]]; then
     echo "Ubuntu 20.04 Focal detected."
     run_ub20
+  elif [[ $DISTRIB == "jammy" ]]; then
+    echo "Ubuntu 22.04 Focal detected."
+    run_ub22
   else
     echo "We don't support this distribution sorry"
   fi
 }
 
-while getopts "r" opt; do
+while getopts "rxd" opt; do
   case ${opt} in
     r )
       echo -e "\n[[ INFO ]] Restart mode... skipping one-time installs\n"
       RESTART_MODE=1
       ;;
+    x )
+      echo -e "\n[[ INFO ]] Installing X11 packages only."
+      install_x11_ub20
+      exit 0
+      ;;
+    d )
+      echo -e "\n[[ INFO ]] Setting up debug flags!"
+      setup_debug
+      exit 0
+      ;;
   esac
 done
 
 run
+# install_vtune_ub20
