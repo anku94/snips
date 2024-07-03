@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rdma/fabric.h>
+#include <rdma/fi_domain.h>
 
 #include <string>
 
@@ -13,7 +14,7 @@ struct FabricConfig {
 
 struct EndpointConfig {
   fi_info *info = nullptr;  // Detailed endpoint configuration.
-                            // Additional endpoint-specific options.
+  fid_domain* domain = nullptr;  // Domain to create the endpoint in.
 };
 
 }  // namespace fi_bench

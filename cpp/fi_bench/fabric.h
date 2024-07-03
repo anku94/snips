@@ -1,6 +1,7 @@
 #pragma once
 
 #include <rdma/fabric.h>
+#include <rdma/fi_domain.h>
 
 #include "config.h"
 
@@ -20,6 +21,10 @@ class Fabric {
 
   // Tears down the fabric environment.
   void Cleanup();
+
+  fid_domain* GetDomain() const { return domain_; }
+
+  fi_info* GetInfo() const { return info_; }
 
  private:
   FabricConfig config_;
