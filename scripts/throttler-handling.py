@@ -252,7 +252,10 @@ def run_all_checks_inner(hosts: list[str]) -> CheckResult:
         for h, name in zip(badnodes, badnode_names):
             logger.warning(f"Bad node: {h} ({name})")
 
-        logger.warning(f"Comma-separated: {','.join(badnode_names)} (excl unreachable)")
+        badnode_name_map: dict[str, str] = dict(zip(badnodes, badnode_names))
+        log_dmesg(sshm, badnodes, badnode_name_map)
+
+        logger.warning(f"Comma-separated: {','.join(badnode_names)} (excl unreach)")
 
         badnode_list += [(h, "unreachable") for h in unreachable_nodes]
         logger.info(f"Good nodes: {len(goodnodes)}")
@@ -264,7 +267,7 @@ def run_all_checks_inner(hosts: list[str]) -> CheckResult:
 
     check_result: CheckResult = {
         "goodnodes": goodnodes,
-        "badnodes": badnode_list,
+        "badnodes": badnode_list
     }
 
     return check_result
@@ -296,36 +299,22 @@ def run_all_checks(work_dir: str) -> list[str]:
     return valid_hosts
 
 
-def parse_args():
-    # use argparse to define an output file
-    # flags: -o, --output-file
+def log_dmesg(sshm: SSHManager, blacklist: list[str], namemap: dict[str, str]):
+    dir_out = "/users/ankushj/badnodes"
+    os.makedirs(dir_out, exist_ok=True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-o",
-        "--output-file",
-        type=str,
-        required=True,
-        help="Output file to write hosts to",
-    )
+    dmesg_cmd = "sudo dmesg"
+    date_str = os.popen("date +'%Y%m%d'").read().strip()
+    dmesg_results = sshm.run_cmd_on_hosts(blacklist, dmesg_cmd)
 
-    parser.add_argument(
-        "-r",
-        "--randomize",
-        action="store_true",
-        required=False,
-        help="Randomize output hostfile order",
-    )
+    for h, r in dmesg_results:
+        n = namemap[h]
+        fout = f"{dir_out}/{n}_{date_str}.txt"
+        logger.info(f"Saving dmesg for node {n} at {fout}")
+        with open(fout, "w") as f:
+            f.write(r)
 
-    args = parser.parse_args()
-
-    logger.info(f"Output file: {args.output_file}")
-    # if path is absolute, parent directory must exist
-    if os.path.isabs(args.output_file):
-        parent_dir = os.path.dirname(args.output_file)
-        assert os.path.exists(parent_dir)
-
-    return args
+    return dmesg_results
 
 
 def setup_logging():
@@ -387,6 +376,38 @@ def run(output_file: str, randomize: bool = False):
         random.shuffle(valid_hosts)
 
     write_file(output_file, valid_hosts)
+
+
+def parse_args():
+    # use argparse to define an output file
+    # flags: -o, --output-file
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-o",
+        "--output-file",
+        type=str,
+        required=True,
+        help="Output file to write hosts to",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--randomize",
+        action="store_true",
+        required=False,
+        help="Randomize output hostfile order",
+    )
+
+    args = parser.parse_args()
+
+    logger.info(f"Output file: {args.output_file}")
+    # if path is absolute, parent directory must exist
+    if os.path.isabs(args.output_file):
+        parent_dir = os.path.dirname(args.output_file)
+        assert os.path.exists(parent_dir)
+
+    return args
 
 
 if __name__ == "__main__":
