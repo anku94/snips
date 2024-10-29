@@ -17,9 +17,20 @@ add_custom_target(rust_lib_build ALL
     COMMENT "Building Rust library"
 )
 
-# Set up imported Rust library
+if (APPLE)
+  set(RUST_LIB_FILE "${CMAKE_CURRENT_SOURCE_DIR}/target/release/librust_lib.dylib")
+elseif (UNIX)
+  set(RUST_LIB_FILE "${CMAKE_CURRENT_SOURCE_DIR}/target/release/librust_lib.so")
+else()
+  message(FATAL_ERROR "Unsupported platform")
+endif()
+
 add_library(rust_lib STATIC IMPORTED GLOBAL)
-set_target_properties(rust_lib PROPERTIES IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/target/release/librust_lib.dylib")
+set_target_properties(rust_lib PROPERTIES
+    IMPORTED_LOCATION "${RUST_LIB_FILE}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}"
+)
+
 
 # Include the header files
 include_directories(include)
