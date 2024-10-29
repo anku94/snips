@@ -1,0 +1,10 @@
+# rust_lib/cbindgen.toml
+language = "C++"
+include_guard = "POINT_H"
+
+[parse]
+parse_deps = false
+include = ["Point"]
+
+[export]
+include = ["Point", "rust_manhattan"]
