@@ -1,0 +1,10 @@
+[CMD] /users/ankushj/install-trees/fab-umbrella/bin/fi_msg_pingpong -p sockets -Sl:1024,16384,65536,262144,1048576,4194304,16777216
+
+bytes   iters   total       time     MB/sec    usec/xfer   Mxfers/sec
+1k      10k     19m         1.01s     20.20      50.70       0.02
+16k     10k     312m        1.25s    262.15      62.50       0.02
+64k     1k      125m        0.27s    478.70     136.90       0.01
+256k    1k      500m        0.56s    943.05     277.98       0.00
+1m      100     200m        0.22s    959.81    1092.48       0.00
+4m      100     800m        0.83s   1006.39    4167.65       0.00
+16m     100     3.1g        2.71s   1240.42   13525.39       0.00

@@ -1,0 +1,9 @@
+[CMD] /users/ankushj/install-trees/fab-umbrella/bin/fi_pingpong -p verbs -e msg 
+
+bytes   #sent   #ack     total       time     MB/sec    usec/xfer   Mxfers/sec
+64      10      =10      1.2k        0.00s      2.37      27.05       0.04
+256     10      =10      5k          0.00s     17.59      14.55       0.07
+1k      10      =10      20k         0.00s    104.49       9.80       0.10
+4k      10      =10      80k         0.00s    152.84      26.80       0.04
+64k     10      =10      1.2m        0.00s   1413.94      46.35       0.02
+1m      10      =10      20m         0.02s   1149.94     911.85       0.00

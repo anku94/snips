@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<clickhouse>
+  <path>/mnt/ltio/chdb/data</path>
+  <tcp_port>9000</tcp_port>
+  <http_port>8123</http_port>
+  <listen_host>0.0.0.0</listen_host>
+
+  <!-- Log path -->
+  <logger>
+    <log>/mnt/ltio/chdb/log/clickhouse-server.log</log>
+    <errorlog>/mnt/ltio/chdb/log/clickhouse-server.err.log</errorlog>
+  </logger>
+  <users_config>/users/ankushj/snips/scripts/workflows/users.xml</users_config>
+</clickhouse>

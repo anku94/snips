@@ -1,0 +1,2 @@
+[CMD] /users/ankushj/install-trees/fab-umbrella/bin/fi_msg_pingpong -p tcp;ofi_rxm -e rdm -Sl:1024,16384,65536,262144,1048576,4194304,16777216 h0-dib
+

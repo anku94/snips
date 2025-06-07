@@ -1,0 +1,11 @@
+info threads
+thread 1
+thread 2
+bt
+f 2
+p next_timeout
+q
+bt
+l
+f 2
+q
