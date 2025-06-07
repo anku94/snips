@@ -1,0 +1,37 @@
+---
+# Play 1: Check connectivity to an IP
+- name: Check connectivity to h0-dib
+  hosts: myhosts
+  vars:
+    ansible_python_interpreter: /users/ankushj/mambaforge/bin/python
+  gather_facts: no
+  tasks:
+    - name: Ping IP
+      tags: deps
+      command: ping -c 1 h0-dib
+      register: ping_result
+      ignore_errors: yes
+
+    - name: Fail if ping is unsuccessful
+      tags: deps
+      debug:
+        msg: "{{ inventory_hostname }}"
+      failed_when: ping_result.rc != 0
+# Play 2: Ensure /mnt/ltio exists
+- name: Ensure that Lustre mount exists
+  hosts: myhosts
+  vars:
+    ansible_python_interpreter: /users/ankushj/mambaforge/bin/python
+  gather_facts: no
+  tasks:
+    - name: List mount path for lustre
+      tags: lustre
+      command: ls -d /mnt/ltio/parthenon-topo
+      register: mount_result
+      ignore_errors: yes
+
+    - name: Fail if ls is unsuccessful
+      tags: lustre
+      debug:
+        msg: "{{ inventory_hostname }}"
+      failed_when: mount_result.rc != 0

@@ -128,10 +128,30 @@ def get_other_hw_issues_check() -> Check:
     }
 
 
+def get_memsz_check() -> Check:
+    return {
+        "name": "check_memsz",
+        "cmd": "free | awk '{print $2 }'",
+        "output_func": lambda x: int(x.split("\n")[1]) / 2**20 < 62,
+        "action": "blacklist",
+    }
+
+
 def execute_check(sshm: SSHManager, check_nodes: list[str], check: Check) -> list[str]:
     logger.info(f"Executing check: {check['name']}")
+    check_func = check["output_func"]
+
     ret = sshm.run_cmd_on_hosts(check_nodes, check["cmd"])
-    badnodes = [h for h, o in ret if check["output_func"](o)]
+    badnodes: list[str] = []
+
+    for h, o in ret:
+        try:
+            if check_func(o):
+                badnodes.append(h)
+        except Exception as e:
+            logger.error(f"Failed to execute check for {h}: {e}")
+            pass
+
     return badnodes
 
 
@@ -225,6 +245,7 @@ def run_all_checks_inner(hosts: list[str]) -> CheckResult:
         get_throttling_check(),
         get_badmem_check(),
         get_other_hw_issues_check(),
+        get_memsz_check(),
     ]
 
     logger.info(f"Running {len(all_checks)} checks on {len(hosts)} hosts")
@@ -265,10 +286,7 @@ def run_all_checks_inner(hosts: list[str]) -> CheckResult:
     finally:
         del sshm
 
-    check_result: CheckResult = {
-        "goodnodes": goodnodes,
-        "badnodes": badnode_list
-    }
+    check_result: CheckResult = {"goodnodes": goodnodes, "badnodes": badnode_list}
 
     return check_result
 

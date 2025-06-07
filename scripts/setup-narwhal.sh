@@ -76,25 +76,58 @@ install_basics() {
   sudo dpkg -i ~/downloads/bat_0.10.0_amd64.deb
 }
 
-install_basics_ub22() {
-  remove_pkg clang-format clang-format-10
+#
+## Uninstall default qib, install Chuck's modded qib
+#
 
+setup_qib_ub22() {
+  # do nothing if ib is up
+  local is_ib_up=$(ifconfig | grep 10.94)
+  if [[ -n "$is_ib_up" ]]; then
+    echo "IB interface up. Skipping QIB setup."
+    return
+  fi
+
+  local qib_loaded=$(lsmod | grep qib)
+  # if loaded, unload it
+  if [[ -n "$qib_loaded" ]]; then
+    echo "QIB driver loaded. Unloading..."
+    sudo rmmod ib_qib
+  fi
+
+  sudo insmod /users/ankushj/downloads/ib_qib.ko
+  sudo /share/testbed/bin/network --ib connected
+}
+
+install_basics_ub22() {
   sudo apt-get update
 
-  PACKAGES=infiniband-diags
-  PACKAGES="$PACKAGES libgflags-dev libgtest-dev libblkid-dev"
-  PACKAGES="$PACKAGES socat pkg-config fio"
-  PACKAGES="$PACKAGES libpmem-dev libpapi-dev numactl g++-9 clang-format htop tree"
-  PACKAGES="$PACKAGES silversearcher-ag sysstat exuberant-ctags libnuma-dev"
-  PACKAGES="$PACKAGES linux-modules-extra-$(uname -r)"
-  PACKAGES="$PACKAGES linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)"
-  PACKAGES="$PACKAGES parallel"
+  PACKAGES_INST=(infiniband-diags libgflags-dev libgtest-dev
+    libblkid-dev socat pkg-config fio libpmem-dev libpapi-dev
+    numactl clang-format htop tree silversearcher-ag
+    sysstat exuberant-ctags libnuma-dev
+    linux-modules-extra-$(uname -r)
+    linux-tools-common linux-tools-$(uname -r)
+    linux-cloud-tools-$(uname -r)
+    parallel librdmacm-dev libibumad-dev ripgrep fd-find g++-12
+    libmount-dev libkeyutils-dev
+    ca-certificates gpg wget plocate
+  )
 
-  install_pkg "$PACKAGES"
+  # ub22 has gcc-10/11/12, but no g++-12. clang tooling uses gcc-12
+  # by default, and complains about missing g++ header files. I could
+  # not find a simpler way to fix those issues
+
+  echo "Installing packages: ${PACKAGES_INST[@]}"
+  sudo apt install -y ${PACKAGES_INST[@]}
+
+  PACKAGES_REM=(openmpi-bin libopenmpi-dev mpich libmpich-dev)
+  sudo apt remove -y ${PACKAGES_REM[@]}
+
   cd /usr/src/gtest && sudo cmake . && sudo make && sudo mv lib/libg* /usr/local/lib/
 
-  sudo dpkg -i ~/downloads/fd_8.7.0_amd64.deb
-  sudo dpkg -i ~/downloads/bat_0.23.0_amd64.deb
+  # sudo dpkg -i ~/downloads/fd_8.7.0_amd64.deb
+  # sudo dpkg -i ~/downloads/bat_0.23.0_amd64.deb
 }
 
 install_mpich_ub18() {
@@ -116,12 +149,21 @@ install_gitlfs() {
 install_cmake() {
   sudo apt purge -y --auto-remove cmake
   wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-  echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $DISTRIB main" | sudo tee /etc/apt/sources.list.d/kitware.list > /dev/null
+  echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $DISTRIB main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
   sudo apt update
   install_pkg "cmake cmake-curses-gui"
   sudo rm /usr/share/keyrings/kitware-archive-keyring.gpg || /bin/true
   install_pkg kitware-archive-keyring
 
+}
+
+install_cmake_ub22() {
+  # to install cmake 4.0 or something -- don't want this now
+  test -f /usr/share/doc/kitware-archive-keyring/copyright ||
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+  echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+  sudo apt-get update -y
+  sudo apt-get install cmake -y
 }
 
 install_psm_ub18() {
@@ -136,8 +178,8 @@ install_psm_ub20() {
 
 install_vtune_ub20() {
   cd /tmp
-  wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | \
-    gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+  wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB |
+    gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg >/dev/null
   echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
   sudo apt update
 
@@ -152,6 +194,10 @@ install_x11_ub20() {
   install_pkg "$PACKAGES"
 }
 
+install_rust() {
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+}
+
 misc_config() {
   sudo /share/testbed/bin/localize-resolv
 
@@ -161,6 +207,9 @@ misc_config() {
   echo 0 | sudo dd of=/proc/sys/kernel/yama/ptrace_scope
   # For vtune
   echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
+
+  # for apache arrow
+  mamba install -c conda-forge xsimd
 }
 
 mount_fses() {
@@ -225,12 +274,42 @@ run_ub20() {
   mount_fses
 }
 
+ensure_l0fs() {
+  if [[ ! -d /l0 ]]; then
+    echo "Formatting filesystem at /dev/sda4"
+
+    sudo mkdir /l0
+    sudo chown -R ankushj:TableFS /l0
+    sudo chmod -R 755 /l0
+    sudo mkfs.ext4 /dev/sda4
+    sudo mount /dev/sda4 /l0
+    sudo chown -R ankushj:TableFS /l0
+    sudo chmod -R 755 /l0
+  else
+    echo "Filesystem already exists at /l0"
+  fi
+
+  mkdir -p /l0/coredumps
+  echo '/l0/coredumps/core.%P' | sudo tee /proc/sys/kernel/core_pattern
+}
+
 run_ub22() {
   init
+  setup_debug
   install_basics_ub22
+  #install_cmake_ub22
 
-  # 746 stuff
-  sudo apt install -y build-essential libfuse-dev libtar-dev libxml2-dev libs3-dev gdb blktrace valgrind
+  # to fix old cmake problems
+  sudo apt remove -y cmake cmake-data
+  sudo apt install -y cmake-data=3.22.1-1ubuntu1.22.04.2 cmake=3.22.1-1ubuntu1.22.04.2 cmake-curses-gui=3.22.1-1ubuntu1.22.04.2
+
+  setup_qib_ub22
+  install_gitlfs
+  #install_rust
+  misc_config
+
+  # if /l0 does not exist
+  #ensure_l0fs
 }
 
 run() {
@@ -252,20 +331,20 @@ run() {
 
 while getopts "rxd" opt; do
   case ${opt} in
-    r )
-      echo -e "\n[[ INFO ]] Restart mode... skipping one-time installs\n"
-      RESTART_MODE=1
-      ;;
-    x )
-      echo -e "\n[[ INFO ]] Installing X11 packages only."
-      install_x11_ub20
-      exit 0
-      ;;
-    d )
-      echo -e "\n[[ INFO ]] Setting up debug flags!"
-      setup_debug
-      exit 0
-      ;;
+  r)
+    echo -e "\n[[ INFO ]] Restart mode... skipping one-time installs\n"
+    RESTART_MODE=1
+    ;;
+  x)
+    echo -e "\n[[ INFO ]] Installing X11 packages only."
+    install_x11_ub20
+    exit 0
+    ;;
+  d)
+    echo -e "\n[[ INFO ]] Setting up debug flags!"
+    setup_debug
+    exit 0
+    ;;
   esac
 done
 

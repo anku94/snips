@@ -1,0 +1,30 @@
+
+  hosts: myhosts
+  vars:
+    ansible_python_interpreter: /users/ankushj/mambaforge/bin/python
+  tasks:
+    - name: Run the setup-narwhal.sh script
+      shell: /users/ankushj/scripts/setup-narwhal.sh -a 2>&1 | tee /tmp/setup-narwhal.log
+      async: 1000
+      poll: 0
+      register: script_output
+
+    - name: Wait for the script to finish
+      async_status:
+        jid: "{{ script_output.ansible_job_id }}"
+      register: job_result
+      until: job_result.finished
+      retries: 50
+      delay: 20
+
+    - name: Ensure that the log directory exists
+      ansible.builtin.file:
+        path: /tmp/logs
+        state: directory
+        mode: '0755'
+
+    - name: Gather all logs
+      fetch:
+        src: /tmp/setup-narwhal.log
+        dest: /tmp/logs/{{ inventory_hostname }}-setup-narwhal.log
+        flat: yes
