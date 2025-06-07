@@ -1,7 +1,17 @@
 #include <atomic>
+#include <emmintrin.h>
 #include <thread>
 
 #include "common.h"
+
+inline void mysleep() {
+  // nanosleep for 1 ns
+  struct timespec req = {0, 1};
+  struct timespec rem = {0, 0};
+  while (nanosleep(&req, &rem) == -1) {
+    req = rem;
+  }
+}
 
 class AtomicPollingRoundTrip : public RoundTrip {
 public:
@@ -16,6 +26,8 @@ public:
           flag.store(false);
           count++;
         }
+
+        _mm_pause();
       }
     };
 
@@ -24,6 +36,9 @@ public:
         if (!flag.load()) {
           flag.store(true);
         }
+
+        // mysleep();
+        _mm_pause();
       }
     };
 
@@ -38,4 +53,3 @@ public:
     Print("atomic/polling", count, seconds);
   }
 };
-

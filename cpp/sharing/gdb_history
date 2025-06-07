@@ -1,0 +1,17 @@
+file ./benchmark
+info symbols
+info
+info classes
+ifno functions
+disass std::thread::_State_impl<std::thread::_Invoker<std::tuple<ConditionVarRoundTrip::Run(int)::{lambda()#1}> > >::_M_run();
+disass std::thread::_State_impl<std::thread::_Invoker<std::tuple<ConditionVarRoundTrip::Run(int)::{lambda()#1}> > >::_M_run()
+info functions
+disass AtomicPollingRoundTrip::Run(int) 
+disass SignalRoundTrip::Run(int)::{lambda(void*)#1}::_FUN(void*)
+disass SignalRoundTrip::Run(int)::{lambda(void*)#1}::_FUN(void*) 
+info functions AtomicRoundTrip
+set print asm-demangle off
+set print demangle off
+info functions AtomicPolling
+disass _ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZN22AtomicPollingRoundTrip3RunEiEUlvE0_EEEEE6_M_runEv
+q
