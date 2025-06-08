@@ -2,9 +2,9 @@ int trace_beg_EVID(struct pt_regs *ctx) {
     u32 cpu = bpf_get_smp_processor_id();
 
     u32 *is_active = tracing_active.lookup(&cpu);
-    if (!is_active || *is_active == 0) {
-        return 0;
-    }
+    // if (!is_active || *is_active == 0) {
+    //     return 0;
+    // }
 
     struct event_entry key = {};
     key.pid = bpf_get_current_pid_tgid();
@@ -20,9 +20,9 @@ int trace_beg_EVID(struct pt_regs *ctx) {
 int trace_end_EVID(struct pt_regs *ctx) {
     u32 cpu = bpf_get_smp_processor_id();
     u32 *is_active = tracing_active.lookup(&cpu);
-    if (!is_active || *is_active == 0) {
-        return 0;
-    }
+    // if (!is_active || *is_active == 0) {
+    //     return 0;
+    // }
 
     u64 *ts;
 

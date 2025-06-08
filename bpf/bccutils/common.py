@@ -21,12 +21,14 @@ class ProbeSpec:
         uprobe: Whether to attach uprobe (function entry)
         uretprobe: Whether to attach uretprobe (function exit)
         stack: Whether to collect stack traces
+        regex: Whether to use regex for symbol matching
     """
     name: str
     sym: str
     uprobe: bool
     uretprobe: bool
     stack: bool
+    regex: bool
 
 
 class ProbeFuncs(TypedDict):

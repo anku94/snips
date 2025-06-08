@@ -9,6 +9,7 @@ from .common import ProbeSpec, ProbeFuncs, logger
 from .prepper import Prepper  
 from .tracer import Tracer
 from .templates import get_template, list_templates
+from .collector import EventCollector
 
 # Export main classes and functions
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     'ProbeSpec',
     'ProbeFuncs',
     'get_template',
-    'list_templates'
+    'list_templates',
+    'EventCollector'
 ] 

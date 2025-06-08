@@ -16,11 +16,11 @@ from .templates import get_template
 class Tracer:
     """
     High-level BPF tracing coordinator
-    
+
     Manages probe specifications, BPF program generation, and probe attachments.
     Provides convenient methods for adding probes and interfacing with BCC.
     """
-    
+
     def __init__(self):
         """Initialize Tracer with Prepper for code generation"""
         self._prepper = Prepper()
@@ -30,15 +30,15 @@ class Tracer:
     def add_meshinit_probe(self, spec: ProbeSpec):
         """
         Add a special mesh initialization probe with predefined functions
-        
+
         This uses hardcoded function names for compatibility with existing
         infrastructure that expects 'trace_begin' and 'trace_end' functions.
-        
+
         Args:
             spec: ProbeSpec with target library and symbol information
         """
         funcs: ProbeFuncs = {
-            "fn_name": "trace_begin", 
+            "fn_name": "trace_begin",
             "fn_name_ret": "trace_end"
         }
         self._spec.append((spec, funcs))
@@ -47,7 +47,7 @@ class Tracer:
     def add_probe(self, spec: ProbeSpec):
         """
         Add a general purpose probe with dynamically generated functions
-        
+
         Args:
             spec: ProbeSpec with probe configuration
         """
@@ -59,7 +59,7 @@ class Tracer:
     def gen_bpf(self) -> str:
         """
         Generate complete BPF program
-        
+
         Returns:
             Complete BPF C code ready for compilation
         """
@@ -68,10 +68,10 @@ class Tracer:
     def get_template(self, name: str) -> str:
         """
         Get a template by name (convenience method)
-        
+
         Args:
             name: Template name
-            
+
         Returns:
             Template content as string
         """
@@ -80,7 +80,7 @@ class Tracer:
     def attach_all_probes(self, b: BPF):
         """
         Attach all configured probes to a BPF instance
-        
+
         Args:
             b: Compiled BPF program instance
         """
@@ -92,32 +92,39 @@ class Tracer:
     def _attach_probe(self, b: BPF, spec: ProbeSpec, funcs: ProbeFuncs):
         """
         Attach individual probe to BPF instance
-        
+
         Args:
             b: BPF instance
             spec: Probe specification
             funcs: Generated function names
         """
-        # Convert to bytes for BCC
-        name = spec.name.encode("utf-8")
-        sym = spec.sym.encode("utf-8")
-        fn = funcs["fn_name"].encode("utf-8")
-        fn_ret = funcs["fn_name_ret"].encode("utf-8")
+        fn = funcs["fn_name"]
+        fn_ret = funcs["fn_name_ret"]
 
-        # Attach uprobe (function entry) if requested
+        args_dict = {
+            "name": spec.name,
+            "fn_name": fn,
+        }
+
+        if spec.regex:
+            args_dict["sym_re"] = spec.sym
+        else:
+            args_dict["sym"] = spec.sym
+
         if spec.uprobe:
-            b.attach_uprobe(name=name, sym=sym, fn_name=fn)
-            logger.debug(f"Attached uprobe: {spec.sym} -> {funcs['fn_name']}")
+            b.attach_uprobe(**args_dict)
+            logger.debug(f"Attached uprobe: {spec.sym} -> {fn}")
 
-        # Attach uretprobe (function exit) if requested  
+        # Attach uretprobe (function exit) if requested
         if spec.uretprobe:
-            b.attach_uretprobe(name=name, sym=sym, fn_name=fn_ret)
-            logger.debug(f"Attached uretprobe: {spec.sym} -> {funcs['fn_name_ret']}")
+            args_dict["fn_name"] = fn_ret
+            b.attach_uretprobe(**args_dict)
+            logger.debug(f"Attached uretprobe: {spec.sym} -> {fn_ret}")
 
     def get_sym_map(self) -> dict[int, str]:
         """
         Get symbol to event ID mapping
-        
+
         Returns:
             Dict mapping event IDs to symbol names
         """
@@ -126,12 +133,12 @@ class Tracer:
     def decode_sid(self, b: BPF, sid: int, pid: int) -> list[str]:
         """
         Decode stack trace from stack ID
-        
+
         Args:
             b: BPF instance with stack_traces table
             sid: Stack ID from event
             pid: Process ID for symbol resolution
-            
+
         Returns:
             List of symbol names in stack trace
         """
@@ -143,10 +150,11 @@ class Tracer:
         try:
             stack_traces = b.get_table("stack_traces")
             stack_list = list(stack_traces.walk(sid))
-            stack_syms = [b.sym(addr, pid, show_offset=True) for addr in stack_list]
+            stack_syms = [b.sym(addr, pid, show_offset=True)
+                          for addr in stack_list]
             stack_str: list[str] = [sym.decode("utf-8") for sym in stack_syms]
         except Exception as e:
             logger.warning(f"Failed to decode stack trace: {e}")
             stack_str = ["NA"]
 
-        return stack_str 
+        return stack_str
