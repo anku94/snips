@@ -6,11 +6,16 @@ program compilation, and event collection. It coordinates between the
 Prepper for code generation and BCC for runtime operations.
 """
 
+import os
+import logging
 from bcc import BPF
 
-from .common import ProbeSpec, ProbeFuncs, logger
+from .common import ProbeSpec, ProbeFuncs
 from .prepper import Prepper
 from .templates import get_template
+from .sym_mapper import SymMapper
+
+logger = logging.getLogger(__name__)
 
 
 class Tracer:
@@ -25,7 +30,98 @@ class Tracer:
         """Initialize Tracer with Prepper for code generation"""
         self._prepper = Prepper()
         self._spec: list[tuple[ProbeSpec, ProbeFuncs]] = []
+        self._aliases: dict[str, dict] = {}
+        self._sym_mappers: dict[str, SymMapper] = {}
         logger.debug("Tracer initialized")
+
+    def register_alias(self, alias: str, soname: str, uprobe: bool = True, 
+                      uretprobe: bool = True, stack: bool = False, regex: bool = False,
+                      cache: bool = False, cache_prefixes: list[str] = None):
+        """
+        Register an alias with default probe specification arguments
+        
+        Args:
+            alias: Name of the alias to register
+            soname: Library/binary path to attach to
+            uprobe: Whether to attach uprobe (function entry)
+            uretprobe: Whether to attach uretprobe (function exit) 
+            stack: Whether to collect stack traces
+            regex: Whether to use regex for symbol matching
+            cache: Whether to build symbol cache for this library
+            cache_prefixes: List of prefixes to filter cached symbols
+        """
+        self._aliases[alias] = {
+            "name": soname,
+            "uprobe": uprobe,
+            "uretprobe": uretprobe,
+            "stack": stack,
+            "regex": regex
+        }
+        logger.info(f"Registered alias '{alias}' for {soname}")
+        
+        if cache:
+            logger.info(f"Building symbol cache for alias '{alias}'")
+            mapper = SymMapper()
+            mapper.add_elf(soname, prefixes=cache_prefixes)
+            self._sym_mappers[alias] = mapper
+            logger.info(f"Symbol cache built for '{alias}' with {len(mapper._sym_to_elf)} symbols")
+
+    def add_alias_probe(self, alias: str, sym: str):
+        """
+        Add a probe using a registered alias
+        
+        Args:
+            alias: Name of the registered alias to use
+            sym: Symbol name to probe
+            
+        Raises:
+            KeyError: If alias is not registered
+            FileNotFoundError: If the library specified by the alias doesn't exist
+        """
+        if alias not in self._aliases:
+            raise KeyError(f"Alias '{alias}' not registered. Use register_alias() first.")
+        
+        alias_args = self._aliases[alias]
+        soname = alias_args["name"]
+        
+        # Check if library exists
+        so_exists = os.path.exists(soname)
+        logger.info(f"Library {soname} exists? {so_exists}")
+        
+        if not so_exists:
+            raise FileNotFoundError(f"Library {soname} does not exist for alias '{alias}'")
+        
+        spec = ProbeSpec(sym=sym, **alias_args)
+        self.add_probe(spec)
+        logger.info(f"Added probe for {sym} using alias '{alias}' -> {soname}")
+
+    def add_fuzzy_probe(self, alias: str, sym: list[str]):
+        """
+        Add a probe using fuzzy symbol lookup in the alias cache
+        
+        Args:
+            alias: Name of the registered alias to use (must have cache enabled)
+            sym: List of filter strings to match against cached symbols
+        """
+        logger.info(f"Adding fuzzy probe for alias '{alias}' with filters {sym}")
+        
+        if alias not in self._aliases:
+            logger.error(f"Alias '{alias}' not registered")
+            return
+        
+        if alias not in self._sym_mappers:
+            logger.error(f"Alias '{alias}' does not have symbol cache enabled")
+            return
+        
+        mapper = self._sym_mappers[alias]
+        logger.info(f"Looking up symbol with filters {sym} in cache for '{alias}'")
+        
+        try:
+            symbol, elf_path = mapper.get_sym(sym)
+            logger.info(f"Found symbol '{symbol}' in cache, adding probe")
+            self.add_alias_probe(alias, symbol)
+        except:
+            logger.error(f"Symbol lookup failed for filters {sym} in alias '{alias}'")
 
     def add_meshinit_probe(self, spec: ProbeSpec):
         """
@@ -52,7 +148,8 @@ class Tracer:
             spec: ProbeSpec with probe configuration
         """
         # Generate BPF functions via Prepper
-        funcs = self._prepper.add_uprobe(spec.sym, spec.stack)
+        prettyname = spec.prettyname if spec.prettyname is not None else spec.sym
+        funcs = self._prepper.add_uprobe(spec.sym, spec.stack, prettyname)
         self._spec.append((spec, funcs))
         logger.debug(f"Added probe for {spec.sym}")
 

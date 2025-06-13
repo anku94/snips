@@ -5,7 +5,7 @@ A structured framework for BPF tracing using BCC with template-based code genera
 Provides classes for building and managing uprobe/uretprobe tracing programs.
 """
 
-from .common import ProbeSpec, ProbeFuncs, logger
+from .common import ProbeSpec, ProbeFuncs
 from .prepper import Prepper  
 from .tracer import Tracer
 from .templates import get_template, list_templates
@@ -19,5 +19,6 @@ __all__ = [
     'ProbeFuncs',
     'get_template',
     'list_templates',
-    'EventCollector'
+    'EventCollector',
+    'elfsym'
 ] 

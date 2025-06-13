@@ -1,13 +1,21 @@
 """
-Event Collection and Analysis Utilities
+Event Collection and DataFrame Management
 
-Provides EventCollector class for accumulating BPF events and converting
-them to pandas DataFrames for analysis.
+The EventCollector class provides structured collection of BPF events
+into pandas DataFrames for analysis. It manages event callbacks and
+data accumulation from BPF ring buffers.
 """
 
+import logging
+import threading
+from dataclasses import dataclass, field
+from typing import Dict, List, Any, Callable
+
 import pandas as pd
-from typing import Any, Dict, List, Optional
-from .common import logger
+from bcc import BPF
+from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class EventCollector:

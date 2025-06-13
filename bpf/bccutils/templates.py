@@ -1,10 +1,15 @@
 """
-Template management for BCC utilities
+BPF Template Management
+
+Provides template loading and management functionality for BPF code generation.
+Templates are stored in the templates/ directory and loaded as needed.
 """
 
+import logging
 import os
 from pathlib import Path
-from .common import logger
+
+logger = logging.getLogger(__name__)
 
 # Auto-discover templates at package load time
 _TEMPLATE_DIR = Path(__file__).parent / "templates"

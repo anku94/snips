@@ -5,9 +5,12 @@ The Prepper class handles dynamic BPF code generation by combining
 base templates with dynamically generated uprobe functions.
 """
 
-from .common import ProbeFuncs, symbol_map, logger
+import logging
+from typing import Dict
+from .common import ProbeFuncs, symbol_map
 from .templates import get_template
 
+logger = logging.getLogger(__name__)
 
 class Prepper:
     """
@@ -55,13 +58,14 @@ class Prepper:
         self._prog.append(uprobe_prog)
         logger.debug(f"Added uprobe event for EVID {evid}, stack={stack}")
 
-    def add_uprobe(self, sym_name: str, stack: bool) -> ProbeFuncs:
+    def add_uprobe(self, sym_name: str, stack: bool, prettyname: str = None) -> ProbeFuncs:
         """
         Add uprobe functions for a symbol and return function names
         
         Args:
             sym_name: Symbol name to trace
             stack: Whether to collect stack traces
+            prettyname: Pretty name for display (defaults to sym_name if None)
             
         Returns:
             ProbeFuncs with generated function names
@@ -72,9 +76,12 @@ class Prepper:
         # Generate BPF functions
         self._add_uprobe_event(evid_str, stack)
         
-        # Update counters and mappings
+        # Use prettyname if provided, otherwise use sym_name
+        display_name = prettyname if prettyname is not None else sym_name
+        
+        # Update counters and mappings (use prettyname for display mapping)
         self._evid_first += 1
-        self._sym_evid_map[sym_name] = evid
+        self._sym_evid_map[display_name] = evid
 
         # Return function names for probe attachment
         probe_funcs: ProbeFuncs = {
@@ -82,7 +89,7 @@ class Prepper:
             "fn_name_ret": f"trace_end_{evid}",
         }
 
-        logger.debug(f"Generated uprobe for symbol '{sym_name}' -> EVID {evid}")
+        logger.debug(f"Generated uprobe for symbol '{sym_name}' (prettyname: '{display_name}') -> EVID {evid}")
         return probe_funcs
 
     def gen_bpf(self) -> str:

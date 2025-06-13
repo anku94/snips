@@ -22,6 +22,7 @@ class ProbeSpec:
         uretprobe: Whether to attach uretprobe (function exit)
         stack: Whether to collect stack traces
         regex: Whether to use regex for symbol matching
+        prettyname: Pretty name for display purposes (defaults to sym if None)
     """
     name: str
     sym: str
@@ -29,6 +30,7 @@ class ProbeSpec:
     uretprobe: bool
     stack: bool
     regex: bool
+    prettyname: str = None
 
 
 class ProbeFuncs(TypedDict):
