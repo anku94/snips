@@ -1,3 +1,20 @@
+#ifndef BPF_UPROBE_C
+#define BPF_UPROBE_C
+
+// event_entry: struct for event tracking key
+// Used for identifying events by pid+cpu+evid in bpf_uprobe.c
+struct event_entry {
+    u32 pid;
+    u32 cpu;
+    u32 evid;
+};
+
+// event_tsbeg: map[struct event_entry] -> u64 timestamp
+// Used for tracking event begin timestamps in bpf_uprobe.c
+BPF_HASH(event_tsbeg, struct event_entry, u64);
+
+#endif
+
 int trace_beg_EVID(struct pt_regs *ctx) {
     u32 cpu = bpf_get_smp_processor_id();
 

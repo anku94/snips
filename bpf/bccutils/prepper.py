@@ -25,7 +25,8 @@ class Prepper:
         """Initialize Prepper with base template and event ID tracking"""
         # Start with base BPF framework
         bpf_base = get_template("bpf_base")
-        self._prog: list[str] = [bpf_base]
+        bpf_comm = get_template("bpf_comm")
+        self._prog: list[str] = [bpf_base, bpf_comm]
         
         # Event ID allocation (21+ for dynamic events, <21 reserved)
         self._evid_first = 21
@@ -42,7 +43,8 @@ class Prepper:
             stack: Whether to enable stack trace collection
         """
         # Get the uprobe template
-        uprobe_str = get_template("bpf_uprobe")
+        # uprobe_str = get_template("bpf_uprobe")
+        uprobe_str = get_template("bpf_uprobe_aggr")
         
         # Configure stack tracing
         if stack:

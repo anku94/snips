@@ -48,12 +48,18 @@ tracer.register_alias("libmon", LIBMON, cache=True, cache_prefixes=["_ZN3mon"])
 tracer.register_alias("libna_debug", LIBNA_DBG)
 tracer.register_alias("libofi", LIBFAB)
 tracer.register_alias("libibv", LIBIBV)
+tracer.register_alias("libc", LIBC)
+
+tracer.add_alias_probe("libc", "malloc")
 
 
-tracer.add_alias_probe("libhg", "HG_Forward")
-tracer.add_alias_probe("libhg", "HG_Respond")
+# tracer.add_alias_probe("libhg", "HG_Forward")
+# tracer.add_alias_probe("libhg", "HG_Respond")
+tracer.add_alias_probe("libhg", "HG_Core_event_progress")
+#tracer.add_alias_probe("libhg", "HG_Core_trigger")
 
-tracer.add_fuzzy_probe("libmon", ["OverlayInternal", "DebugFwdCallback"])
+tracer.add_fuzzy_probe("libmon", ["OverlayInternal", "DebugReqHandler"], "DbgReqHnd")
+tracer.add_fuzzy_probe("libmon", ["OverlayInternal", "DebugRespBulkCallback"], "DbgRespBulkCallback")
 
 # tracer.add_alias_probe("libofi", "vrb_mr_regattr")
 # tracer.add_alias_probe("libofi", "rxm_mr_regattr")
@@ -90,6 +96,9 @@ b = BPF(text=bpf_text)
 log_out = "hgbpf.log"
 log_file = open(log_out, "w+")
 
+# Global PID to process name mapping
+pid_to_comm = {}
+
 
 def print_event(event, ev_map: dict[int, str]):
     global INIT_TIME
@@ -116,6 +125,59 @@ def print_event(event, ev_map: dict[int, str]):
     log_file.write(fmtstr + "\n")
 
 
+def comm_callback(binst):
+    """Read and populate the global PID to process name mapping"""
+    global pid_to_comm
+    
+    try:
+        pid_to_name_map = binst["pid_to_name"]
+        for pid, proc_name in pid_to_name_map.items():
+            comm_name = proc_name.name.decode('utf-8', errors='ignore').rstrip('\x00')
+            pid_to_comm[pid.value] = comm_name
+    except KeyError:
+        # pid_to_name map doesn't exist (bpf_comm.c not included)
+        pass
+
+
+def get_comm_for_pid(pid):
+    """Helper function to get process name for a PID"""
+    return pid_to_comm.get(pid, f"PID_{pid}")
+
+
+def aggr_callback(binst, ev_map: dict[int, str]):
+    """Read and print the entire aggregated statistics table"""
+    func_aggr_stats = binst["func_aggr_stats"]
+    
+    print("\n=== Aggregated Function Statistics ===")
+    for func_key, func_stats in func_aggr_stats.items():
+        pid = func_key.pid
+        evid = func_key.evid
+        sym = ev_map.get(evid, f"UNKNOWN_EVID_{evid}")
+        comm = get_comm_for_pid(pid)
+        
+        totdur = func_stats.totdur
+        totcnt = func_stats.totcnt
+        maxdur = func_stats.maxdur
+        mindur = func_stats.mindur
+        
+        avgdur = totdur / totcnt if totcnt > 0 else 0
+
+        stdout = ""
+        stdout += f"PID[{pid:8d}]"
+        stdout += f" {comm:16s}"
+        stdout += f" {sym:30s}"
+        stdout += f" cnt:{totcnt:8d}"
+        stdout += f" tot:{totdur/1e6:10.3f} ms"
+        stdout += f" avg:{avgdur/1e3:8.2f} us"
+        stdout += f" min:{mindur/1e3:8.2f} us"
+        stdout += f" max:{maxdur/1e3:8.2f} us"
+
+        print(stdout)
+        log_file.write(stdout + "\n")
+
+    func_aggr_stats.clear()
+
+
 def callback(ctx, data, size):
     event = b["events"].event(data)
     print_event(event, sym_map)
@@ -138,12 +200,15 @@ exiting = False
 
 while not exiting:
     try:
-        b.ring_buffer_poll(1000)
-        b.ring_buffer_poll(1000)
-        b.ring_buffer_poll(1000)
+        # b.ring_buffer_poll(1000)
+        # b.ring_buffer_poll(1000)
+        #b.ring_buffer_poll(1000)
         # df = collector.to_dataframe()
         # all_dfs.append(df)
-        exiting = True
+        # exiting = True
+        comm_callback(b)
+        aggr_callback(b, sym_map )
+        time.sleep(2)
     except KeyboardInterrupt:
         exiting = True
         print("Exiting...")

@@ -66,7 +66,7 @@ class Tracer:
             self._sym_mappers[alias] = mapper
             logger.info(f"Symbol cache built for '{alias}' with {len(mapper._sym_to_elf)} symbols")
 
-    def add_alias_probe(self, alias: str, sym: str):
+    def add_alias_probe(self, alias: str, sym: str, prettysym: str = None):
         """
         Add a probe using a registered alias
         
@@ -91,11 +91,11 @@ class Tracer:
         if not so_exists:
             raise FileNotFoundError(f"Library {soname} does not exist for alias '{alias}'")
         
-        spec = ProbeSpec(sym=sym, **alias_args)
+        spec = ProbeSpec(sym=sym, prettyname=prettysym, **alias_args)
         self.add_probe(spec)
         logger.info(f"Added probe for {sym} using alias '{alias}' -> {soname}")
 
-    def add_fuzzy_probe(self, alias: str, sym: list[str]):
+    def add_fuzzy_probe(self, alias: str, sym: list[str], prettysym: str = None):
         """
         Add a probe using fuzzy symbol lookup in the alias cache
         
@@ -117,9 +117,9 @@ class Tracer:
         logger.info(f"Looking up symbol with filters {sym} in cache for '{alias}'")
         
         try:
-            symbol, elf_path = mapper.get_sym(sym)
+            symbol, _ = mapper.get_sym(sym)
             logger.info(f"Found symbol '{symbol}' in cache, adding probe")
-            self.add_alias_probe(alias, symbol)
+            self.add_alias_probe(alias, symbol, prettysym)
         except:
             logger.error(f"Symbol lookup failed for filters {sym} in alias '{alias}'")
 
