@@ -34,17 +34,36 @@ class Prepper:
         # Symbol to event ID mapping (start with predefined symbols)
         self._sym_evid_map: dict[str, int] = {**symbol_map}
 
-    def _add_uprobe_event(self, evid: str, stack: bool = False):
+    @staticmethod
+    def process_template(template_code: str, enabled_blocks: list[str]) -> str:
+        """
+        Process template by enabling specified blocks
+        
+        Args:
+            template_code: Template code with block markers
+            enabled_blocks: List of block names to enable
+            
+        Returns:
+            Processed template code
+        """
+        result = template_code
+        for block in enabled_blocks:
+            result = result.replace(f'//{block}:', '')
+        return result
+
+    def _add_uprobe_event(self, evid: str, stack: bool = False, is_trig: bool = False, use_trig: bool = False):
         """
         Add a uprobe/uretprobe function pair to the BPF program
         
         Args:
             evid: Event ID string to substitute in template
             stack: Whether to enable stack trace collection
+            is_trig: Whether this probe is a trigger probe
+            use_trig: Whether this probe uses trigger checking
         """
         # Get the uprobe template
         # uprobe_str = get_template("bpf_uprobe")
-        uprobe_str = get_template("bpf_uprobe_aggr")
+        uprobe_str = get_template("bpf_uprobe_stack_aggr")
         
         # Configure stack tracing
         if stack:
@@ -52,15 +71,25 @@ class Prepper:
         else:
             uprobe_stack = "-1"  # No stack tracing
         
+        # Configure trigger blocks
+        enabled_blocks = []
+        if is_trig:
+            enabled_blocks.append("IS_TRIG")
+        if use_trig:
+            enabled_blocks.append("USE_TRIG")
+        
+        # Process template with enabled blocks
+        uprobe_str = self.process_template(uprobe_str, enabled_blocks)
+        
         # Substitute template variables
         uprobe_prog = uprobe_str.replace("EVID", evid)
         uprobe_prog = uprobe_prog.replace("STACK_LOGIC", uprobe_stack)
         
         # Add to program
         self._prog.append(uprobe_prog)
-        logger.debug(f"Added uprobe event for EVID {evid}, stack={stack}")
+        logger.debug(f"Added uprobe event for EVID {evid}, stack={stack}, is_trig={is_trig}, use_trig={use_trig}")
 
-    def add_uprobe(self, sym_name: str, stack: bool, prettyname: str = None) -> ProbeFuncs:
+    def add_uprobe(self, sym_name: str, stack: bool, prettyname: str = None, is_trig: bool = False, use_trig: bool = False) -> tuple[int, ProbeFuncs]:
         """
         Add uprobe functions for a symbol and return function names
         
@@ -68,6 +97,8 @@ class Prepper:
             sym_name: Symbol name to trace
             stack: Whether to collect stack traces
             prettyname: Pretty name for display (defaults to sym_name if None)
+            is_trig: Whether this probe is a trigger probe
+            use_trig: Whether this probe uses trigger checking
             
         Returns:
             ProbeFuncs with generated function names
@@ -76,7 +107,7 @@ class Prepper:
         evid_str = str(evid)
         
         # Generate BPF functions
-        self._add_uprobe_event(evid_str, stack)
+        self._add_uprobe_event(evid_str, stack, is_trig, use_trig)
         
         # Use prettyname if provided, otherwise use sym_name
         display_name = prettyname if prettyname is not None else sym_name
@@ -92,7 +123,7 @@ class Prepper:
         }
 
         logger.debug(f"Generated uprobe for symbol '{sym_name}' (prettyname: '{display_name}') -> EVID {evid}")
-        return probe_funcs
+        return evid, probe_funcs
 
     def gen_bpf(self) -> str:
         """
@@ -104,6 +135,14 @@ class Prepper:
         program = "\n".join(self._prog)
         logger.debug(f"Generated BPF program with {len(self._prog)} components")
         return program
+
+    def write_bpf(self, filename: str):
+        """
+        Write BPF program to file
+        """
+        logger.info(f"Writing BPF program to {filename}")
+        with open(filename, "w") as f:
+            f.write(self.gen_bpf())
     
     def get_sym_map(self) -> dict[int, str]:
         """

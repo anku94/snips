@@ -12,31 +12,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProbeSpec:
-    """
-    Specification for a BPF probe attachment
-    
-    Attributes:
-        name: Library/binary path to attach to
-        sym: Symbol name to probe  
-        uprobe: Whether to attach uprobe (function entry)
-        uretprobe: Whether to attach uretprobe (function exit)
-        stack: Whether to collect stack traces
-        regex: Whether to use regex for symbol matching
-        prettyname: Pretty name for display purposes (defaults to sym if None)
-    """
-    name: str
-    sym: str
-    uprobe: bool
-    uretprobe: bool
-    stack: bool
-    regex: bool
-    prettyname: str = None
+    name: str # library/binary path to attach to
+    sym: str # symbol name to probe
+    uprobe: bool  # whether to attach a uprobe
+    uretprobe: bool  # whether to attach a uretprobe
+    stack: bool  # whether to collect stack traces
+    regex: bool  # whether to use regex for symbol matching
+    prettyname: str = None  # pretty name for display (defaults to sym if None)
+    is_trig: bool = False  # whether this is a trigger probe
 
 
 class ProbeFuncs(TypedDict):
     """
     Generated BPF function names for a probe
-    
+
     Keys:
         fn_name: Entry probe function name (uprobe)
         fn_name_ret: Exit probe function name (uretprobe)
@@ -63,4 +52,4 @@ symbol_map_softirq: dict[str, int] = {
 symbol_map: dict[str, int] = {
     **symbol_map_softirq,
     "meshinit": 20,   # Custom application event
-} 
+}

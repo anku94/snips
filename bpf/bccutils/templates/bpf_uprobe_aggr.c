@@ -19,10 +19,10 @@ struct func_key {
 // func_stats: struct containing aggregate statistics per function per PID
 // Used for storing totdur, totcnt, maxdur, mindur in bpf_uprobe_aggr.c
 struct func_stats {
-    u64 totdur;   // total duration across all calls
+    u64 totdurns;   // total duration across all calls
     u64 totcnt;   // total call count
-    u64 maxdur;   // maximum single call duration
-    u64 mindur;   // minimum single call duration
+    u64 maxdurns;   // maximum single call duration
+    u64 mindurns;   // minimum single call duration
 };
 
 // func_aggr_stats: map[struct func_key] -> struct func_stats
@@ -46,21 +46,21 @@ static inline int accumulate_func_stats(u32 pid, u32 evid, u64 duration) {
     
     if (stats) {
         // Update existing stats
-        stats->totdur += duration;
+        stats->totdurns += duration;
         stats->totcnt++;
-        if (duration > stats->maxdur) {
-            stats->maxdur = duration;
+        if (duration > stats->maxdurns) {
+            stats->maxdurns = duration;
         }
-        if (duration < stats->mindur) {
-            stats->mindur = duration;
+        if (duration < stats->mindurns) {
+            stats->mindurns = duration;
         }
     } else {
         // First call for this pid+function - initialize stats
         struct func_stats new_stats = {};
-        new_stats.totdur = duration;
+        new_stats.totdurns = duration;
         new_stats.totcnt = 1;
-        new_stats.maxdur = duration;
-        new_stats.mindur = duration;
+        new_stats.maxdurns = duration;
+        new_stats.mindurns = duration;
         func_aggr_stats.update(&func_key, &new_stats);
     }
     
@@ -70,19 +70,23 @@ static inline int accumulate_func_stats(u32 pid, u32 evid, u64 duration) {
 #endif
 
 int trace_beg_EVID(struct pt_regs *ctx) {
-    u32 cpu = bpf_get_smp_processor_id();
+    u32 pid = bpf_get_current_pid_tgid();
+    u32 one = 1;
 
-    u32 *is_active = tracing_active.lookup(&cpu);
-    // if (!is_active || *is_active == 0) {
-    //     return 0;
-    // }
+    // this syntax is blocks that can be enabled by prepper
+    //IS_TRIG: tracing_active.update(&pid, &one);
+
+    //USE_TRIG: u32 *is_active = tracing_active.lookup(&pid);
+    //USE_TRIG: if (!is_active || *is_active == 0) {
+    //USE_TRIG:     return 0;
+    //USE_TRIG: }
 
     // Record process name for current PID
     record_current_comm();
 
     struct event_entry key = {};
     key.pid = bpf_get_current_pid_tgid();
-    key.cpu = cpu;
+    key.cpu = bpf_get_smp_processor_id();
     key.evid = EVID;
 
     u64 ts = bpf_ktime_get_ns();
@@ -92,17 +96,21 @@ int trace_beg_EVID(struct pt_regs *ctx) {
 }
 
 int trace_end_EVID(struct pt_regs *ctx) {
-    u32 cpu = bpf_get_smp_processor_id();
-    u32 *is_active = tracing_active.lookup(&cpu);
-    // if (!is_active || *is_active == 0) {
-    //     return 0;
-    // }
+    u32 pid = bpf_get_current_pid_tgid();
+    u32 zero = 0;
+
+    //IS_TRIG: tracing_active.update(&pid, &zero);
+
+    //USE_TRIG: u32 *is_active = tracing_active.lookup(&pid);
+    //USE_TRIG: if (!is_active || *is_active == 0) {
+    //USE_TRIG:     return 0;
+    //USE_TRIG: }
 
     u64 *ts;
 
     struct event_entry key = {};
     key.pid = bpf_get_current_pid_tgid();
-    key.cpu = cpu;
+    key.cpu = bpf_get_smp_processor_id();
     key.evid = EVID;
 
     ts = event_tsbeg.lookup(&key);
