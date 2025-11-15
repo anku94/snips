@@ -209,7 +209,7 @@ misc_config() {
   echo 0 | sudo tee /proc/sys/kernel/kptr_restrict
 
   # for apache arrow
-  mamba install -c conda-forge xsimd
+  #mamba install -c conda-forge xsimd
 }
 
 mount_fses() {
@@ -304,7 +304,7 @@ run_ub22() {
   sudo apt install -y cmake-data=3.22.1-1ubuntu1.22.04.2 cmake=3.22.1-1ubuntu1.22.04.2 cmake-curses-gui=3.22.1-1ubuntu1.22.04.2
 
   setup_qib_ub22
-  install_gitlfs
+  #install_gitlfs
   #install_rust
   misc_config
 

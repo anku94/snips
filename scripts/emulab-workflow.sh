@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-bash
-
-EXP_NAME=amree
-EXP_FULLNAME=TableFS,amree
-# EXP_FULLNAME=TableFS,amr22wfok01
+EXP_NAME=mon8
+EXP_FULLNAME=TableFS,mon8
 EXP_TGTSZ1=40
-EXP_TGTSZ2=260
+EXP_TGTSZ2=80
+EXP_TGTSZ3=160
 
 message() {
   echo "-INFO- $@"
@@ -17,6 +15,7 @@ die() {
   exit 1
 }
 
+# modexp_to_target: modexp experiment to target node count
 modexp_to_target() {
   local exp_fullname=$1
   local -i tgtcnt=$2
@@ -46,6 +45,10 @@ modexp_to_target() {
   [ $nnodes -eq $tgtcnt ] || die "Failed to modexp to $tgtcnt nodes"
 }
 
+# run_downsize_and_swapin: downsize swapped exp to tgtcnt, then swap in
+# Args:
+#  # exp_fullname: full name of experiment
+#  # tgtcnt: target node count to downsize to
 run_downsize_and_swapin() {
   local exp_fullname=$1
   local -i tgtcnt=$2
@@ -57,10 +60,10 @@ run_downsize_and_swapin() {
     egrep -o "State: (.*)" | \
     grep -q "swapped" || die "Experiment not swapped"
 
-  message "$exp_fullname is swapped"
+  message "$exp_fullname is swapped... proceeding"
 
   nnodes=$(ssh ops "/usr/testbed/bin/expinfo -e $exp_fullname -n" | grep pc | wc -l)
-  message "Number of nodes in $exp_fullname: $nnodes"
+  message "Number of nodes $exp_fullname: $nnodes (before modexp)"
 
   # then modexp to size exp to $EXP_TGTSZ1
   # get_nnodes $EXP_FULLNAME
@@ -114,7 +117,7 @@ run_seq() {
 
 run_seq2() {
   local exp_fullname=$EXP_FULLNAME
-  exp_fullname="TableFS,amree"
+
   state=$(ssh ops "/usr/testbed/bin/expinfo -e $exp_fullname -a" | grep "State: ")
   message "Experiment state: $state"
 
@@ -138,16 +141,7 @@ run_seq2() {
     modexp_to_target $exp_fullname $EXP_TGTSZ1
   fi
 
-  exp_fullname="TableFS,amree"
-  run_downsize_and_swapin "TableFS,amre" 3
-  sleep 100
-  modexp_to_target "TableFS,amree" 250
-  sleep 100
-  modexp_to_target "TableFS,amree" 256
-  modexp_to_target $exp_fullname 240
-
   sleep 10
-
   nnodes=$(ssh ops "/usr/testbed/bin/expinfo -e $exp_fullname -n" | grep pc | wc -l)
 
   # mod exp to EXP_TGTSZ2
@@ -157,7 +151,7 @@ run_seq2() {
   sleep 10
   # ssh "h0.$EXP_NAME.tablefs" "~/scripts/run-ansible.sh -a"
   # ~/scripts/run-ansible.sh -a
+
 }
 
-# sleep 500
 run_seq2

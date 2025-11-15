@@ -362,4 +362,14 @@ umbrella_main() {
   #umbrella_clean
 }
 
+setup_parquet_tools() {
+  # Look up latest version here:
+  # https://repo1.maven.org/maven2/de/m3y/parquet/parquet-cli-standalone/
+  cd ~/downloads
+  wget https://repo1.maven.org/maven2/de/m3y/parquet/parquet-cli-standalone/1.15.2/parquet-cli-standalone-1.15.2-shaded.jar
+  java
+  PQPATH=$HOME/downloads/parquet-cli-standalone-1.15.2-shaded.jar
+  echo "alias pqcli=\"java -jar $PQPATH\"" >> ~/.zshrc
+}
+
 umbrella_main
