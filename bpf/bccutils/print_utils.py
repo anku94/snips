@@ -1,7 +1,7 @@
 class PrettyPrint:
     @staticmethod
     def dur(durns: float) -> str:
-        units = [ "ns", "us", "ms", "s" ]
+        units = [ "ns", "us", "ms", "s " ]
         conv = 1000
         usel = ""
         for unit in units:
@@ -14,7 +14,7 @@ class PrettyPrint:
 
     @staticmethod
     def cnt(cnt: float) -> str:
-        units = [ "", "K", "M" ]
+        units = [ " ", "K", "M" ]
         conv = 1000
         usel = ""
 

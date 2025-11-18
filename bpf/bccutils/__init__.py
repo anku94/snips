@@ -11,6 +11,7 @@ from .tracer import Tracer, ProbeId
 from .templates import get_template, list_templates
 from .collector import EventCollector
 from .print_utils import PrettyPrint as pp
+from .sym_mapper import SymMapper as sm
 
 # Export main classes and functions
 __all__ = [
@@ -23,5 +24,5 @@ __all__ = [
     'list_templates',
     'EventCollector',
     'pp',
-    'elfsym'
+    'sm'
 ] 
