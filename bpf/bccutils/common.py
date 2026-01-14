@@ -22,6 +22,13 @@ class ProbeSpec:
     is_trig: bool = False  # whether this is a trigger probe
 
 
+@dataclass
+class KprobeSpec:
+    sym: str  # kernel function name to probe
+    kprobe: bool = True  # whether to attach a kprobe
+    kretprobe: bool = True  # whether to attach a kretprobe (needed for timing)
+
+
 class ProbeFuncs(TypedDict):
     """
     Generated BPF function names for a probe

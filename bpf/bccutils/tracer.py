@@ -10,7 +10,7 @@ import os
 import logging
 from bcc import BPF
 
-from .common import ProbeSpec, ProbeFuncs
+from .common import ProbeSpec, ProbeFuncs, KprobeSpec
 from typing import NamedTuple
 from .prepper import Prepper
 from .templates import get_template
@@ -38,6 +38,7 @@ class Tracer:
         """Initialize Tracer with Prepper for code generation"""
         self._prepper = Prepper()
         self._spec: list[tuple[ProbeSpec, ProbeFuncs]] = []
+        self._kspec: list[tuple[KprobeSpec, ProbeFuncs]] = []
         self._aliases: dict[str, dict] = {}
         self._sym_mappers: dict[str, SymMapper] = {}
         self._evid_soname_map: dict[int, str] = {}
@@ -168,6 +169,20 @@ class Tracer:
         self._evid_soname_map[evid] = spec.name
         logger.debug(f"Added probe for {spec.sym} -> evid {evid}, soname {spec.name}")
 
+    def add_kprobe(self, spec: KprobeSpec):
+        """
+        Add a kprobe for tracing kernel functions
+
+        Args:
+            spec: KprobeSpec with kprobe configuration
+        """
+        # Generate BPF functions via Prepper
+        evid, funcs = self._prepper.add_kprobe(spec.sym)
+        self._kspec.append((spec, funcs))
+        # For kprobes, store "kernel" as the "library" name
+        self._evid_soname_map[evid] = "kernel"
+        logger.debug(f"Added kprobe for {spec.sym} -> evid {evid}")
+
     def gen_bpf(self) -> str:
         """
         Generate complete BPF program
@@ -196,10 +211,13 @@ class Tracer:
         Args:
             b: Compiled BPF program instance
         """
-        logger.info(f"Attaching {len(self._spec)} probes")
+        logger.info(f"Attaching {len(self._spec)} uprobes and {len(self._kspec)} kprobes")
         for spec, funcs in self._spec:
-            logger.debug(f"Attaching probe for {spec.sym}")
+            logger.debug(f"Attaching uprobe for {spec.sym}")
             self._attach_probe(b, spec, funcs)
+        for spec, funcs in self._kspec:
+            logger.debug(f"Attaching kprobe for {spec.sym}")
+            self._attach_kprobe(b, spec, funcs)
 
     def _attach_probe(self, b: BPF, spec: ProbeSpec, funcs: ProbeFuncs):
         """
@@ -232,6 +250,28 @@ class Tracer:
             args_dict["fn_name"] = fn_ret
             b.attach_uretprobe(**args_dict)
             logger.debug(f"Attached uretprobe: {spec.sym} -> {fn_ret}")
+
+    def _attach_kprobe(self, b: BPF, spec: KprobeSpec, funcs: ProbeFuncs):
+        """
+        Attach individual kprobe to BPF instance
+
+        Args:
+            b: BPF instance
+            spec: Kprobe specification
+            funcs: Generated function names
+        """
+        fn = funcs["fn_name"]
+        fn_ret = funcs["fn_name_ret"]
+
+        # Attach kprobe (kernel function entry) if requested
+        if spec.kprobe:
+            b.attach_kprobe(event=spec.sym, fn_name=fn)
+            logger.debug(f"Attached kprobe: {spec.sym} -> {fn}")
+
+        # Attach kretprobe (kernel function exit) if requested
+        if spec.kretprobe:
+            b.attach_kretprobe(event=spec.sym, fn_name=fn_ret)
+            logger.debug(f"Attached kretprobe: {spec.sym} -> {fn_ret}")
 
     def get_sym_map(self) -> dict[int, str]:
         """
@@ -294,22 +334,30 @@ class Tracer:
         # Check cache first
         if probe_id in self._sym_cache:
             return self._sym_cache[probe_id]
-        
+
         # Get library/binary path from evid
         if probe_id.evid not in self._evid_soname_map:
             logger.warning(f"Unknown evid {probe_id.evid}, cannot resolve address {probe_id.addr:x}")
             sym_name = f"0x{probe_id.addr:x}"
         else:
             soname = self._evid_soname_map[probe_id.evid]
-            try:
-                # Use the existing BPF instance for symbol resolution with correct PID
-                sym_bytes = b.sym(probe_id.addr, probe_id.pid, show_offset=True, demangle=True)
-                sym_name = sym_bytes.decode('utf-8')
-                # logger.debug(f"Resolved {probe_id} -> {sym_name}")
-            except Exception as e:
-                logger.warning(f"Failed to resolve symbol for {probe_id} in {soname}: {e}")
-                sym_name = f"0x{probe_id.addr:x}"
-        
+
+            # For kprobes (kernel functions), use the symbol name from evid mapping
+            # Kprobes store addr=0, so address resolution won't work
+            if soname == "kernel" and probe_id.addr == 0:
+                sym_map = self.get_sym_map()
+                sym_name = sym_map.get(probe_id.evid, f"evid_{probe_id.evid}")
+            else:
+                # For uprobes, resolve symbol from address
+                try:
+                    # Use the existing BPF instance for symbol resolution with correct PID
+                    sym_bytes = b.sym(probe_id.addr, probe_id.pid, show_offset=True, demangle=True)
+                    sym_name = sym_bytes.decode('utf-8')
+                    # logger.debug(f"Resolved {probe_id} -> {sym_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to resolve symbol for {probe_id} in {soname}: {e}")
+                    sym_name = f"0x{probe_id.addr:x}"
+
         # Cache the result
         self._sym_cache[probe_id] = sym_name
         return sym_name

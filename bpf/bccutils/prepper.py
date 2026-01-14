@@ -54,7 +54,7 @@ class Prepper:
     def _add_uprobe_event(self, evid: str, stack: bool = False, is_trig: bool = False, use_trig: bool = False):
         """
         Add a uprobe/uretprobe function pair to the BPF program
-        
+
         Args:
             evid: Event ID string to substitute in template
             stack: Whether to enable stack trace collection
@@ -64,30 +64,47 @@ class Prepper:
         # Get the uprobe template
         # uprobe_str = get_template("bpf_uprobe")
         uprobe_str = get_template("bpf_uprobe_stack_aggr")
-        
+
         # Configure stack tracing
         if stack:
             uprobe_stack = get_template("bpf_uprobe_stack")
         else:
             uprobe_stack = "-1"  # No stack tracing
-        
+
         # Configure trigger blocks
         enabled_blocks = []
         if is_trig:
             enabled_blocks.append("IS_TRIG")
         if use_trig:
             enabled_blocks.append("USE_TRIG")
-        
+
         # Process template with enabled blocks
         uprobe_str = self.process_template(uprobe_str, enabled_blocks)
-        
+
         # Substitute template variables
         uprobe_prog = uprobe_str.replace("EVID", evid)
         uprobe_prog = uprobe_prog.replace("STACK_LOGIC", uprobe_stack)
-        
+
         # Add to program
         self._prog.append(uprobe_prog)
         logger.debug(f"Added uprobe event for EVID {evid}, stack={stack}, is_trig={is_trig}, use_trig={use_trig}")
+
+    def _add_kprobe_event(self, evid: str):
+        """
+        Add a kprobe/kretprobe function pair to the BPF program
+
+        Args:
+            evid: Event ID string to substitute in template
+        """
+        # Get the kprobe template
+        kprobe_str = get_template("bpf_kprobe_aggr")
+
+        # Substitute template variables
+        kprobe_prog = kprobe_str.replace("EVID", evid)
+
+        # Add to program
+        self._prog.append(kprobe_prog)
+        logger.debug(f"Added kprobe event for EVID {evid}")
 
     def add_uprobe(self, sym_name: str, stack: bool, prettyname: str = None, is_trig: bool = False, use_trig: bool = False) -> tuple[int, ProbeFuncs]:
         """
@@ -123,6 +140,35 @@ class Prepper:
         }
 
         logger.debug(f"Generated uprobe for symbol '{sym_name}' (prettyname: '{display_name}') -> EVID {evid}")
+        return evid, probe_funcs
+
+    def add_kprobe(self, sym_name: str) -> tuple[int, ProbeFuncs]:
+        """
+        Add kprobe functions for a kernel symbol and return function names
+
+        Args:
+            sym_name: Kernel function name to trace
+
+        Returns:
+            Tuple of (evid, ProbeFuncs) with event ID and generated function names
+        """
+        evid = self._evid_first
+        evid_str = str(evid)
+
+        # Generate BPF functions
+        self._add_kprobe_event(evid_str)
+
+        # Update counters and mappings
+        self._evid_first += 1
+        self._sym_evid_map[sym_name] = evid
+
+        # Return function names for probe attachment
+        probe_funcs: ProbeFuncs = {
+            "fn_name": f"trace_kprobe_beg_{evid}",
+            "fn_name_ret": f"trace_kprobe_end_{evid}",
+        }
+
+        logger.debug(f"Generated kprobe for kernel function '{sym_name}' -> EVID {evid}")
         return evid, probe_funcs
 
     def gen_bpf(self) -> str:
